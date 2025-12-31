@@ -473,6 +473,7 @@ class HisenseTV:
         """Handle connection callback."""
         if rc == 0:
             self._connected = True
+            _LOGGER.info("Connected to TV at %s:%s", self.host, self.port)
             # Subscribe to response topics
             self._client.subscribe(TOPIC_STATE_RESPONSE)
             self._client.subscribe(TOPIC_VOLUME_RESPONSE)
