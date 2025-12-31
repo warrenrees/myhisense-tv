@@ -105,6 +105,7 @@ class AsyncHisenseTV:
         self._loop = loop
 
         # Store init params for lazy client creation
+        # Client is NOT created here to avoid blocking SSL calls in event loop
         self._init_kwargs = {
             "host": host,
             "port": port,
@@ -126,8 +127,8 @@ class AsyncHisenseTV:
             "auto_detect_protocol": auto_detect_protocol,
         }
 
-        # Create sync client
-        self._client = HisenseTV(**self._init_kwargs)
+        # Client is created lazily in _ensure_client() to avoid blocking event loop
+        self._client: Optional[HisenseTV] = None
 
     def _get_loop(self) -> asyncio.AbstractEventLoop:
         """Get event loop."""
@@ -137,6 +138,21 @@ class AsyncHisenseTV:
             return asyncio.get_running_loop()
         except RuntimeError:
             return asyncio.get_event_loop()
+
+    def _ensure_client(self) -> HisenseTV:
+        """Ensure the sync client is created (for use in executor).
+
+        This must be called from within an executor thread, not the event loop,
+        because HisenseTV.__init__ performs blocking SSL operations.
+        """
+        if self._client is None:
+            self._client = HisenseTV(**self._init_kwargs)
+        return self._client
+
+    async def _async_ensure_client(self) -> None:
+        """Ensure client is created, running in executor to avoid blocking."""
+        if self._client is None:
+            await self._run_in_executor(self._ensure_client)
 
     async def _run_in_executor(self, func: Callable, *args, **kwargs) -> Any:
         """Run a sync function in the executor.
@@ -158,27 +174,27 @@ class AsyncHisenseTV:
     @property
     def host(self) -> str:
         """TV IP address."""
-        return self._client.host
+        return self._init_kwargs["host"]
 
     @property
     def port(self) -> int:
         """MQTT port."""
-        return self._client.port
+        return self._init_kwargs["port"]
 
     @property
     def is_connected(self) -> bool:
         """Check if connected to TV."""
-        return self._client.is_connected
+        return self._client.is_connected if self._client else False
 
     @property
     def is_authenticated(self) -> bool:
         """Check if authenticated."""
-        return self._client.is_authenticated()
+        return self._client.is_authenticated() if self._client else False
 
     @property
     def state(self) -> dict:
         """Get last known TV state."""
-        return self._client.state
+        return self._client.state if self._client else {}
 
     # Connection methods
     async def async_connect(
@@ -199,17 +215,21 @@ class AsyncHisenseTV:
         Returns:
             True if connected successfully
         """
-        return await self._run_in_executor(
-            self._client.connect,
-            timeout=timeout,
-            auto_auth=auto_auth,
-            auto_refresh=auto_refresh,
-            try_fallback=try_fallback,
-        )
+        def _connect():
+            client = self._ensure_client()
+            return client.connect(
+                timeout=timeout,
+                auto_auth=auto_auth,
+                auto_refresh=auto_refresh,
+                try_fallback=try_fallback,
+            )
+
+        return await self._run_in_executor(_connect)
 
     async def async_disconnect(self) -> None:
         """Disconnect from the TV asynchronously."""
-        await self._run_in_executor(self._client.disconnect)
+        if self._client:
+            await self._run_in_executor(self._client.disconnect)
 
     # Authentication
     async def async_start_pairing(self) -> bool:
@@ -218,7 +238,11 @@ class AsyncHisenseTV:
         Returns:
             True if pairing request sent
         """
-        return await self._run_in_executor(self._client.start_pairing)
+        def _start_pairing():
+            client = self._ensure_client()
+            return client.start_pairing()
+
+        return await self._run_in_executor(_start_pairing)
 
     async def async_authenticate(
         self,
@@ -236,6 +260,8 @@ class AsyncHisenseTV:
         Returns:
             True if authentication successful
         """
+        if not self._client:
+            return False
         return await self._run_in_executor(
             self._client.authenticate,
             pin,
@@ -249,6 +275,8 @@ class AsyncHisenseTV:
         Returns:
             True if token refreshed successfully
         """
+        if not self._client:
+            return False
         return await self._run_in_executor(
             self._client.refresh_token,
             timeout=timeout,
@@ -256,15 +284,16 @@ class AsyncHisenseTV:
 
     def needs_authentication(self) -> bool:
         """Check if TV is requesting authentication."""
-        return self._client.needs_authentication()
+        return self._client.needs_authentication() if self._client else False
 
     def clear_saved_token(self) -> None:
         """Clear saved authentication token."""
-        self._client.clear_saved_token()
+        if self._client:
+            self._client.clear_saved_token()
 
     def get_saved_token_info(self) -> Optional[dict]:
         """Get saved token info."""
-        return self._client.get_saved_token_info()
+        return self._client.get_saved_token_info() if self._client else None
 
     # Remote keys
     async def async_send_key(self, key: str, check_state: bool = False) -> bool:
@@ -497,39 +526,40 @@ class AsyncHisenseTV:
     # Sync method aliases (for backwards compatibility or when blocking is OK)
     def connect(self, *args, **kwargs) -> bool:
         """Sync connect (blocking)."""
-        return self._client.connect(*args, **kwargs)
+        return self._ensure_client().connect(*args, **kwargs)
 
     def disconnect(self) -> None:
         """Sync disconnect (blocking)."""
-        return self._client.disconnect()
+        if self._client:
+            return self._client.disconnect()
 
     def send_key(self, *args, **kwargs) -> bool:
         """Sync send_key (blocking)."""
-        return self._client.send_key(*args, **kwargs)
+        return self._ensure_client().send_key(*args, **kwargs)
 
     def power(self) -> bool:
         """Sync power toggle (blocking)."""
-        return self._client.power()
+        return self._ensure_client().power()
 
     def get_volume(self, *args, **kwargs) -> Optional[int]:
         """Sync get_volume (blocking)."""
-        return self._client.get_volume(*args, **kwargs)
+        return self._ensure_client().get_volume(*args, **kwargs)
 
     def set_volume(self, *args, **kwargs) -> bool:
         """Sync set_volume (blocking)."""
-        return self._client.set_volume(*args, **kwargs)
+        return self._ensure_client().set_volume(*args, **kwargs)
 
     def get_state(self, *args, **kwargs) -> Optional[dict]:
         """Sync get_state (blocking)."""
-        return self._client.get_state(*args, **kwargs)
+        return self._ensure_client().get_state(*args, **kwargs)
 
     def get_apps(self, *args, **kwargs) -> Optional[List[dict]]:
         """Sync get_apps (blocking)."""
-        return self._client.get_apps(*args, **kwargs)
+        return self._ensure_client().get_apps(*args, **kwargs)
 
     def launch_app(self, *args, **kwargs) -> bool:
         """Sync launch_app (blocking)."""
-        return self._client.launch_app(*args, **kwargs)
+        return self._ensure_client().launch_app(*args, **kwargs)
 
 
 # Async discovery functions

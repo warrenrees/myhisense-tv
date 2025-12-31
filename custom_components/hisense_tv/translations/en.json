@@ -9,6 +9,14 @@
           "port": "Port"
         }
       },
+      "certs": {
+        "title": "SSL Certificates",
+        "description": "The TV requires client certificates for mTLS authentication. Place the certificate files in `{cert_dir}/` or specify custom paths below.\n\nRequired files: `{cert_file}` and `{key_file}`",
+        "data": {
+          "certfile": "Certificate file path",
+          "keyfile": "Key file path"
+        }
+      },
       "confirm": {
         "title": "Confirm Hisense TV",
         "description": "Do you want to set up {name} ({host})?"
@@ -23,6 +31,7 @@
     },
     "error": {
       "cannot_connect": "Failed to connect to TV. Make sure the TV is on and reachable.",
+      "certs_not_found": "Certificate files not found. Please check the paths and ensure the files exist.",
       "invalid_pin": "Invalid PIN. Please check the PIN on your TV and try again.",
       "pairing_failed": "Pairing failed. Please try again.",
       "unknown": "An unexpected error occurred."

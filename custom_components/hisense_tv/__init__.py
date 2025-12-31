@@ -19,6 +19,8 @@ from .const import (
     CONF_PORT,
     CONF_MAC,
     CONF_DEVICE_ID,
+    CONF_CERTFILE,
+    CONF_KEYFILE,
     DEFAULT_PORT,
     PLATFORMS,
     SERVICE_SEND_KEY,
@@ -43,6 +45,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     port = entry.data.get(CONF_PORT, DEFAULT_PORT)
     mac = entry.data.get(CONF_MAC)
     device_id = entry.data.get(CONF_DEVICE_ID)
+    certfile = entry.data.get(CONF_CERTFILE)
+    keyfile = entry.data.get(CONF_KEYFILE)
 
     _LOGGER.debug("Setting up Hisense TV at %s:%s", host, port)
 
@@ -50,6 +54,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     tv = AsyncHisenseTV(
         host=host,
         port=port,
+        certfile=certfile,
+        keyfile=keyfile,
         mac_address=mac or device_id,
         use_dynamic_auth=True,
         enable_persistence=True,

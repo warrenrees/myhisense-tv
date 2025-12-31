@@ -12,10 +12,17 @@ CONF_NAME: Final = "name"
 CONF_DEVICE_ID: Final = "device_id"
 CONF_MODEL: Final = "model"
 CONF_SW_VERSION: Final = "sw_version"
+CONF_CERTFILE: Final = "certfile"
+CONF_KEYFILE: Final = "keyfile"
 
 # Default values
 DEFAULT_PORT: Final = 36669
 DEFAULT_NAME: Final = "Hisense TV"
+
+# Default certificate paths (relative to HA config directory)
+DEFAULT_CERT_DIR: Final = "certs"
+DEFAULT_CERT_FILENAME: Final = "vidaa_client.pem"
+DEFAULT_KEY_FILENAME: Final = "vidaa_client.key"
 
 # Timeouts
 TIMEOUT_CONNECT: Final = 10

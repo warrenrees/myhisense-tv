@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import logging
+import os
 from typing import Any
 
 import voluptuous as vol
 
 from homeassistant import config_entries
 from homeassistant.components import ssdp
+from homeassistant.helpers.service_info.ssdp import ATTR_UPNP_FRIENDLY_NAME
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
@@ -20,8 +22,13 @@ from .const import (
     CONF_MAC,
     CONF_MODEL,
     CONF_SW_VERSION,
+    CONF_CERTFILE,
+    CONF_KEYFILE,
     DEFAULT_NAME,
     DEFAULT_PORT,
+    DEFAULT_CERT_DIR,
+    DEFAULT_CERT_FILENAME,
+    DEFAULT_KEY_FILENAME,
     TIMEOUT_CONNECT,
 )
 
@@ -38,11 +45,38 @@ if str(lib_path) not in sys.path:
 from hisense_tv import AsyncHisenseTV
 
 
-async def validate_connection(hass: HomeAssistant, host: str, port: int) -> dict[str, Any]:
+def get_default_cert_paths(hass: HomeAssistant) -> tuple[str, str]:
+    """Get default certificate paths in HA config directory."""
+    config_dir = Path(hass.config.config_dir)
+    cert_dir = config_dir / DEFAULT_CERT_DIR
+    certfile = cert_dir / DEFAULT_CERT_FILENAME
+    keyfile = cert_dir / DEFAULT_KEY_FILENAME
+    return str(certfile), str(keyfile)
+
+
+def check_certs_exist(certfile: str, keyfile: str) -> bool:
+    """Check if certificate files exist and are readable."""
+    return (
+        os.path.isfile(certfile)
+        and os.path.isfile(keyfile)
+        and os.access(certfile, os.R_OK)
+        and os.access(keyfile, os.R_OK)
+    )
+
+
+async def validate_connection(
+    hass: HomeAssistant,
+    host: str,
+    port: int,
+    certfile: str | None = None,
+    keyfile: str | None = None,
+) -> dict[str, Any]:
     """Validate we can connect to the TV."""
     tv = AsyncHisenseTV(
         host=host,
         port=port,
+        certfile=certfile,
+        keyfile=keyfile,
         use_dynamic_auth=False,  # Don't require MAC for initial validation
         enable_persistence=False,
     )
@@ -99,6 +133,8 @@ class HisenseTVConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._model: str | None = None
         self._sw_version: str | None = None
         self._discovery_info: ssdp.SsdpServiceInfo | None = None
+        self._certfile: str | None = None
+        self._keyfile: str | None = None
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -110,28 +146,8 @@ class HisenseTVConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self._host = user_input[CONF_HOST]
             self._port = user_input.get(CONF_PORT, DEFAULT_PORT)
 
-            try:
-                info = await validate_connection(self.hass, self._host, self._port)
-                self._name = info.get("name", DEFAULT_NAME)
-                self._device_id = info.get("device_id")
-                self._model = info.get("model")
-                self._sw_version = info.get("sw_version")
-
-                # Set unique ID if we got device_id
-                if self._device_id:
-                    await self.async_set_unique_id(self._device_id)
-                    self._abort_if_unique_id_configured(
-                        updates={CONF_HOST: self._host, CONF_PORT: self._port}
-                    )
-
-                # Check if pairing is needed
-                return await self.async_step_pair()
-
-            except CannotConnect:
-                errors["base"] = "cannot_connect"
-            except Exception:
-                _LOGGER.exception("Unexpected exception")
-                errors["base"] = "unknown"
+            # Check for certificates before connecting
+            return await self.async_step_certs()
 
         return self.async_show_form(
             step_id="user",
@@ -142,6 +158,101 @@ class HisenseTVConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 }
             ),
             errors=errors,
+        )
+
+    async def async_step_certs(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Handle certificate configuration step."""
+        errors: dict[str, str] = {}
+
+        # Get default paths
+        default_certfile, default_keyfile = get_default_cert_paths(self.hass)
+
+        if user_input is not None:
+            self._certfile = user_input.get(CONF_CERTFILE) or default_certfile
+            self._keyfile = user_input.get(CONF_KEYFILE) or default_keyfile
+
+            # Validate cert paths
+            if not check_certs_exist(self._certfile, self._keyfile):
+                errors["base"] = "certs_not_found"
+            else:
+                # Try to connect with certs
+                try:
+                    info = await validate_connection(
+                        self.hass,
+                        self._host,
+                        self._port,
+                        certfile=self._certfile,
+                        keyfile=self._keyfile,
+                    )
+                    self._name = info.get("name", DEFAULT_NAME)
+                    self._device_id = info.get("device_id")
+                    self._model = info.get("model")
+                    self._sw_version = info.get("sw_version")
+
+                    # Set unique ID if we got device_id
+                    if self._device_id:
+                        await self.async_set_unique_id(self._device_id)
+                        self._abort_if_unique_id_configured(
+                            updates={CONF_HOST: self._host, CONF_PORT: self._port}
+                        )
+
+                    return await self.async_step_pair()
+
+                except CannotConnect:
+                    errors["base"] = "cannot_connect"
+                except Exception:
+                    _LOGGER.exception("Unexpected exception")
+                    errors["base"] = "unknown"
+        else:
+            # First time - check if default certs exist
+            if check_certs_exist(default_certfile, default_keyfile):
+                # Default certs found, use them automatically
+                self._certfile = default_certfile
+                self._keyfile = default_keyfile
+                try:
+                    info = await validate_connection(
+                        self.hass,
+                        self._host,
+                        self._port,
+                        certfile=self._certfile,
+                        keyfile=self._keyfile,
+                    )
+                    self._name = info.get("name", DEFAULT_NAME)
+                    self._device_id = info.get("device_id")
+                    self._model = info.get("model")
+                    self._sw_version = info.get("sw_version")
+
+                    if self._device_id:
+                        await self.async_set_unique_id(self._device_id)
+                        self._abort_if_unique_id_configured(
+                            updates={CONF_HOST: self._host, CONF_PORT: self._port}
+                        )
+
+                    return await self.async_step_pair()
+                except CannotConnect:
+                    errors["base"] = "cannot_connect"
+                except Exception:
+                    _LOGGER.exception("Unexpected exception")
+                    errors["base"] = "unknown"
+
+        # Show certificate configuration form
+        cert_dir = Path(self.hass.config.config_dir) / DEFAULT_CERT_DIR
+        return self.async_show_form(
+            step_id="certs",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(CONF_CERTFILE, default=default_certfile): str,
+                    vol.Optional(CONF_KEYFILE, default=default_keyfile): str,
+                }
+            ),
+            errors=errors,
+            description_placeholders={
+                "cert_dir": str(cert_dir),
+                "cert_file": DEFAULT_CERT_FILENAME,
+                "key_file": DEFAULT_KEY_FILENAME,
+            },
         )
 
     async def async_step_ssdp(
@@ -162,7 +273,7 @@ class HisenseTVConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return self.async_abort(reason="no_host")
 
         self._discovery_info = discovery_info
-        self._name = discovery_info.upnp.get(ssdp.ATTR_UPNP_FRIENDLY_NAME, DEFAULT_NAME)
+        self._name = discovery_info.upnp.get(ATTR_UPNP_FRIENDLY_NAME, DEFAULT_NAME)
 
         # Try to get unique ID from USN
         usn = discovery_info.ssdp_usn
@@ -175,9 +286,24 @@ class HisenseTVConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             await self.async_set_unique_id(unique_id)
             self._abort_if_unique_id_configured(updates={CONF_HOST: self._host})
 
+        # Check for certificates
+        default_certfile, default_keyfile = get_default_cert_paths(self.hass)
+        if not check_certs_exist(default_certfile, default_keyfile):
+            # No certs found, show cert config form
+            return await self.async_step_certs()
+
+        self._certfile = default_certfile
+        self._keyfile = default_keyfile
+
         # Validate connection and get device info
         try:
-            info = await validate_connection(self.hass, self._host, self._port)
+            info = await validate_connection(
+                self.hass,
+                self._host,
+                self._port,
+                certfile=self._certfile,
+                keyfile=self._keyfile,
+            )
             self._name = info.get("name", self._name)
             self._device_id = info.get("device_id")
             self._model = info.get("model")
@@ -220,6 +346,8 @@ class HisenseTVConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             tv = AsyncHisenseTV(
                 host=self._host,
                 port=self._port,
+                certfile=self._certfile,
+                keyfile=self._keyfile,
                 use_dynamic_auth=True,
                 mac_address=self._device_id,
                 enable_persistence=True,
@@ -246,6 +374,8 @@ class HisenseTVConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                                 CONF_MAC: self._device_id,  # device_id is the MAC without colons
                                 CONF_MODEL: self._model,
                                 CONF_SW_VERSION: self._sw_version,
+                                CONF_CERTFILE: self._certfile,
+                                CONF_KEYFILE: self._keyfile,
                             },
                         )
                     else:
@@ -263,6 +393,8 @@ class HisenseTVConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         tv = AsyncHisenseTV(
             host=self._host,
             port=self._port,
+            certfile=self._certfile,
+            keyfile=self._keyfile,
             use_dynamic_auth=True,
             mac_address=self._device_id,
             enable_persistence=False,
