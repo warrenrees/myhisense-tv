@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+import random
 from typing import Any
 
 import voluptuous as vol
@@ -33,6 +34,11 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def generate_random_mac() -> str:
+    """Generate a random MAC address."""
+    return ":".join(f"{random.randint(0, 255):02x}" for _ in range(6))
 
 # Import library
 import sys
@@ -70,14 +76,19 @@ async def validate_connection(
     port: int,
     certfile: str | None = None,
     keyfile: str | None = None,
+    mac_address: str | None = None,
 ) -> dict[str, Any]:
     """Validate we can connect to the TV."""
+    # Use provided MAC or generate a random one for dynamic auth
+    mac = mac_address or generate_random_mac()
+
     tv = AsyncHisenseTV(
         host=host,
         port=port,
         certfile=certfile,
         keyfile=keyfile,
-        use_dynamic_auth=False,  # Don't require MAC for initial validation
+        use_dynamic_auth=True,
+        mac_address=mac,
         enable_persistence=False,
     )
 
@@ -130,6 +141,7 @@ class HisenseTVConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._port: int = DEFAULT_PORT
         self._name: str = DEFAULT_NAME
         self._device_id: str | None = None
+        self._mac: str = generate_random_mac()  # Random MAC for dynamic auth
         self._model: str | None = None
         self._sw_version: str | None = None
         self._discovery_info: ssdp.SsdpServiceInfo | None = None
@@ -349,7 +361,7 @@ class HisenseTVConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 certfile=self._certfile,
                 keyfile=self._keyfile,
                 use_dynamic_auth=True,
-                mac_address=self._device_id,
+                mac_address=self._mac,
                 enable_persistence=True,
             )
 
@@ -371,7 +383,7 @@ class HisenseTVConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                                 CONF_PORT: self._port,
                                 CONF_NAME: self._name,
                                 CONF_DEVICE_ID: self._device_id,
-                                CONF_MAC: self._device_id,  # device_id is the MAC without colons
+                                CONF_MAC: self._mac,  # Random MAC used for auth
                                 CONF_MODEL: self._model,
                                 CONF_SW_VERSION: self._sw_version,
                                 CONF_CERTFILE: self._certfile,
@@ -396,7 +408,7 @@ class HisenseTVConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             certfile=self._certfile,
             keyfile=self._keyfile,
             use_dynamic_auth=True,
-            mac_address=self._device_id,
+            mac_address=self._mac,
             enable_persistence=False,
         )
 
