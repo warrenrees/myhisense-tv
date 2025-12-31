@@ -44,6 +44,7 @@ Thumbs.db
 config.yaml
 tokens.json
 meow
+CLAUDE.md
 .env
 .env.local
 .env.*.local

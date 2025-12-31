@@ -60,10 +60,12 @@ class DiscoveredTV:
     name: Optional[str] = None
     model: Optional[str] = None
     mac: Optional[str] = None
+    protocol_version: Optional[str] = None
     location: Optional[str] = None
     usn: Optional[str] = None
     server: Optional[str] = None
     source: str = "unknown"  # ssdp_msearch, ssdp_notify, udp, probe
+    discovery_method: Optional[str] = None
     raw_data: Dict = field(default_factory=dict)
 
     def __repr__(self) -> str:
@@ -409,63 +411,104 @@ def discover_udp(
 
 def probe_ip(
     ip: str,
-    port: int = DISCOVERY_PORT,
+    port: int = 38400,
     timeout: float = 3.0,
 ) -> Optional[DiscoveredTV]:
-    """Send discovery directly to a specific IP address.
+    """Probe a specific IP address for a Hisense TV.
+
+    Fetches the UPnP device description XML to get TV info.
 
     Args:
         ip: Target IP address.
-        port: Target port (default: 36671).
+        port: UPnP port (default: 38400).
         timeout: How long to wait for response in seconds.
 
     Returns:
         DiscoveredTV if device responds, None otherwise.
     """
-    _LOGGER.debug("Probing %s:%d", ip, port)
+    import urllib.request
+    import xml.etree.ElementTree as ET
 
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.settimeout(timeout)
-
-    for msg in DISCOVERY_MESSAGES:
-        try:
-            sock.sendto(msg, (ip, port))
-        except OSError as e:
-            _LOGGER.debug("Failed to send probe to %s: %s", ip, e)
+    url = f"http://{ip}:{port}/MediaServer/rendererdevicedesc.xml"
+    _LOGGER.debug("Probing %s via UPnP: %s", ip, url)
 
     try:
-        data, addr = sock.recvfrom(4096)
-        try:
-            response = json.loads(data.decode())
-            device = DiscoveredTV(
-                ip=ip,
-                name=response.get(
-                    "devicename",
-                    response.get("name", response.get("device_name")),
-                ),
-                model=response.get("model", response.get("model_name")),
-                mac=response.get("mac", response.get("macaddress")),
-                source="probe",
-                raw_data=response,
-            )
-        except json.JSONDecodeError:
-            raw = data.decode() if data else ""
-            device = DiscoveredTV(
-                ip=ip,
-                source="probe",
-                raw_data={"raw": raw},
-            )
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req, timeout=timeout) as response:
+            data = response.read().decode('utf-8')
 
-        _LOGGER.info("Device responded at %s", ip)
-        sock.close()
+        # Parse XML
+        root = ET.fromstring(data)
+        ns = 'urn:schemas-upnp-org:device-1-0'
+
+        device_elem = root.find('.//{%s}device' % ns)
+
+        name = None
+        model = None
+        mac = None
+        mac_wifi = None
+        mac_eth = None
+        firmware = None
+        raw_data = {}
+
+        if device_elem is not None:
+            # Get friendly name
+            friendly = device_elem.find('{%s}friendlyName' % ns)
+            if friendly is not None:
+                name = friendly.text
+
+            # Get model description (contains MAC, protocol version, etc.)
+            model_desc = device_elem.find('{%s}modelDescription' % ns)
+            if model_desc is not None and model_desc.text:
+                desc_text = model_desc.text
+                # Parse key=value pairs from description
+                for line in desc_text.split('\n'):
+                    if '=' in line:
+                        key, _, value = line.partition('=')
+                        key = key.strip()
+                        value = value.strip()
+                        raw_data[key] = value
+                        if key == 'mac':
+                            mac = value
+                        elif key == 'macWifi':
+                            mac_wifi = value
+                        elif key == 'macEthernet':
+                            mac_eth = value
+
+            # Get model name (skip generic "Renderer")
+            model_name = device_elem.find('{%s}modelName' % ns)
+            if model_name is not None and model_name.text != "Renderer":
+                model = model_name.text
+
+        # Prefer ethernet MAC, fallback to wifi MAC
+        if not mac:
+            mac = mac_eth or mac_wifi
+
+        # Format MAC address with colons if needed
+        if mac and ':' not in mac and len(mac) == 12:
+            mac = ':'.join(mac[i:i+2] for i in range(0, 12, 2))
+
+        device = DiscoveredTV(
+            ip=ip,
+            name=name,
+            model=model,
+            mac=mac,
+            protocol_version=raw_data.get('transport_protocol'),
+            source="probe",
+            discovery_method="upnp_probe",
+            raw_data=raw_data,
+        )
+
+        _LOGGER.info("Found TV at %s: %s", ip, name)
         return device
 
-    except socket.timeout:
-        _LOGGER.debug("No response from %s (timeout)", ip)
+    except urllib.error.URLError as e:
+        _LOGGER.debug("No response from %s: %s", ip, e)
+    except ET.ParseError as e:
+        _LOGGER.debug("Invalid XML from %s: %s", ip, e)
     except Exception as e:
         _LOGGER.debug("Error probing %s: %s", ip, e)
 
-    sock.close()
     return None
 
 

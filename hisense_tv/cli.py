@@ -8,6 +8,7 @@ import time
 from typing import Optional
 
 from .client import HisenseTV
+from .discovery import discover_all, discover_ssdp, discover_udp, probe_ip
 from .config import (
     load_config,
     get_tv_config,
@@ -309,7 +310,7 @@ def cmd_config(args):
             return 1
         ip = args.value
         alias = args.alias if hasattr(args, 'alias') and args.alias else None
-        add_tv(ip, alias=alias)
+        add_tv(ip, ip, alias=alias)  # Use IP as temporary device_id until paired
         print(f"Added TV at {ip}")
         if alias:
             print(f"  Alias: {alias}")
@@ -356,6 +357,54 @@ def cmd_status(args):
     else:
         print("Failed to connect to TV", file=sys.stderr)
         return 1
+    return 0
+
+
+def cmd_discover(args):
+    """Discover Hisense TVs on the network."""
+    timeout = getattr(args, 'timeout', 5.0)
+    method = getattr(args, 'method', 'all')
+    verbose = getattr(args, 'verbose', False)
+
+    print(f"Scanning for Hisense TVs (timeout: {timeout}s)...")
+
+    if method == 'ssdp':
+        devices = discover_ssdp(timeout=timeout)
+    elif method == 'udp':
+        devices = discover_udp(timeout=timeout)
+    elif method == 'probe' and args.ip:
+        device = probe_ip(args.ip, timeout=timeout)
+        devices = {args.ip: device} if device else {}
+    else:
+        devices = discover_all(timeout=timeout)
+
+    if not devices:
+        print("No TVs found.")
+        print("\nTips:")
+        print("  - Make sure the TV is powered on")
+        print("  - Ensure TV and computer are on the same network")
+        print("  - Try: tv discover --method ssdp")
+        print("  - Try probing a specific IP: tv discover --ip 192.168.1.50")
+        return 1
+
+    print(f"\nFound {len(devices)} TV(s):\n")
+
+    for ip, device in devices.items():
+        print(f"  {ip}")
+        if device.name:
+            print(f"    Name:  {device.name}")
+        if device.model:
+            print(f"    Model: {device.model}")
+        if device.mac:
+            print(f"    MAC:   {device.mac}")
+        if verbose:
+            if device.protocol_version:
+                print(f"    Protocol: {device.protocol_version}")
+            if device.discovery_method:
+                print(f"    Via:      {device.discovery_method}")
+        print()
+
+    print("To add a TV: tv config add <IP>")
     return 0
 
 
@@ -738,6 +787,14 @@ def main():
     # Status
     p_status = subparsers.add_parser("status", help="Get TV status")
     p_status.set_defaults(func=cmd_status)
+
+    # Discovery
+    p_discover = subparsers.add_parser("discover", aliases=["scan"], help="Discover TVs on the network")
+    p_discover.add_argument("--timeout", "-t", type=float, default=5.0, help="Discovery timeout in seconds")
+    p_discover.add_argument("--method", "-m", choices=["all", "ssdp", "udp", "probe"], default="all",
+                           help="Discovery method (default: all)")
+    p_discover.add_argument("--verbose", "-v", action="store_true", help="Show more details")
+    p_discover.set_defaults(func=cmd_discover)
 
     # Wake-on-LAN
     p_wake = subparsers.add_parser("wake", help="Wake TV using Wake-on-LAN")
