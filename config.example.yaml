@@ -1,0 +1,32 @@
+# myhisense-tv Configuration
+# Copy this file to config.yaml and edit for your setup
+
+# MQTT Broker Connection (Home Assistant / Mosquitto)
+mqtt:
+  host: "192.168.1.100"      # Your MQTT broker IP
+  port: 1883
+  username: ""               # Leave empty if no auth
+  password: ""
+  discovery_prefix: "homeassistant"
+  client_id: "hisense2mqtt"
+
+# TV Configuration
+# Key by device_id (auto-populated after pairing) or use IP as temporary key
+tvs:
+  "192.168.1.50":            # Temporary key - replaced with device_id after pairing
+    host: "192.168.1.50"     # REQUIRED: TV IP address
+    port: 36669              # Optional: default 36669
+    alias: "living_room"     # Friendly name for CLI (--tv living_room)
+    name: "Living Room TV"   # Display name
+    mac: "XX:XX:XX:XX:XX:XX" # MAC address for Wake-on-LAN
+
+# Default TV for CLI when --tv not specified (device_id or alias)
+default_tv: "living_room"
+
+# Bridge Options
+options:
+  poll_interval: 30          # Seconds between state polls
+  wake_on_lan: true          # Enable WoL for power on
+  discovery: true            # Enable HA MQTT discovery
+  reconnect_interval: 30     # Seconds before reconnect attempt
+  log_level: "INFO"          # DEBUG, INFO, WARNING, ERROR

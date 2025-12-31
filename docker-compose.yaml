@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  hisense2mqtt:
+    build: .
+    container_name: hisense2mqtt
+    restart: unless-stopped
+
+    # Required for Wake-on-LAN broadcast packets
+    network_mode: host
+
+    volumes:
+      # Mount config file
+      - ./config.yaml:/app/config.yaml:ro
+      # Mount certificates
+      - ./certs:/app/certs:ro
+
+    environment:
+      - TZ=America/New_York
+      # Optional: Override config via environment
+      # - MQTT_HOST=192.168.1.100
+      # - MQTT_USERNAME=mqtt_user
+      # - MQTT_PASSWORD=mqtt_pass
+      # - TV_HOST=10.0.0.194
+      # - LOG_LEVEL=DEBUG
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
