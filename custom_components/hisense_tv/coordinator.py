@@ -59,8 +59,9 @@ class HisenseTVDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             _LOGGER.debug("Config entry device_id: %s", device_id)
 
             if not device_id:
-                device_id = device_info.get("network_type")
-                _LOGGER.debug("Using network_type as device_id: %s", device_id)
+                # Use MAC address as device_id - prefer ethernet, fallback to wifi
+                device_id = device_info.get("eth0") or device_info.get("wlan0")
+                _LOGGER.debug("Using MAC as device_id: %s", device_id)
 
             # Update device registry - try device_id first, then entry_id as fallback
             device_registry = dr.async_get(self.hass)
