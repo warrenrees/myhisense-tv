@@ -143,7 +143,13 @@ class HisenseTVDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             # Check connection
             if not self.tv.is_connected:
                 _LOGGER.debug("TV disconnected, attempting reconnect")
-                connected = await self.tv.async_connect(timeout=3)
+                # Disconnect first to ensure clean state
+                try:
+                    await self.tv.async_disconnect()
+                except Exception:
+                    pass
+                # Try to connect with longer timeout for wake-up scenarios
+                connected = await self.tv.async_connect(timeout=5)
                 if not connected:
                     self._available = False
                     raise UpdateFailed("Failed to connect to TV")

@@ -339,6 +339,14 @@ class HisenseTV:
             True if connected successfully
         """
         try:
+            # Clean up any existing connection first
+            try:
+                self._client.loop_stop()
+                self._client.disconnect()
+            except Exception:
+                pass
+            self._connected = False
+
             self._client.connect(self.host, self.port, keepalive=60)
             self._client.loop_start()
 
@@ -348,9 +356,9 @@ class HisenseTV:
                 time.sleep(0.1)
 
             if not self._connected:
-                # Connection failed - try fallback if enabled and protocol wasn't detected
+                # Connection failed - stop loop and try fallback if enabled
+                self._client.loop_stop()
                 if try_fallback and self._protocol_version is None and self.use_dynamic_auth and self.mac_address:
-                    self._client.loop_stop()
                     return self._connect_with_fallback(timeout=timeout, auto_refresh=auto_refresh)
                 return False
 
@@ -363,6 +371,11 @@ class HisenseTV:
             return self._connected
         except Exception as e:
             _LOGGER.error("Connection failed: %s", e)
+            # Stop loop on failure
+            try:
+                self._client.loop_stop()
+            except Exception:
+                pass
             # Try fallback on exception too
             if try_fallback and self._protocol_version is None and self.use_dynamic_auth and self.mac_address:
                 return self._connect_with_fallback(timeout=timeout, auto_refresh=auto_refresh)

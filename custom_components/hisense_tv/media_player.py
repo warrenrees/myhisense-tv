@@ -105,14 +105,17 @@ class HisenseTVMediaPlayer(CoordinatorEntity[HisenseTVDataUpdateCoordinator], Me
 
     @property
     def available(self) -> bool:
-        """Return if entity is available."""
-        return self.coordinator.available
+        """Return if entity is available.
+
+        Always available so power button works for WoL even when TV is off.
+        """
+        return True
 
     @property
-    def state(self) -> MediaPlayerState | None:
+    def state(self) -> MediaPlayerState:
         """Return the state of the TV."""
-        if not self.coordinator.data:
-            return None
+        if not self.coordinator.data or not self.coordinator.available:
+            return MediaPlayerState.OFF
 
         if self.coordinator.data.get("is_on"):
             return MediaPlayerState.ON
