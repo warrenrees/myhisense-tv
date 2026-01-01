@@ -29,16 +29,6 @@ from .coordinator import HisenseTVDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-# Common streaming apps
-KNOWN_APPS = {
-    "netflix": "Netflix",
-    "youtube": "YouTube",
-    "amazon": "Prime Video",
-    "disney": "Disney+",
-    "hulu": "Hulu",
-    "tubi": "Tubi",
-}
-
 
 async def async_setup_entry(
     hass: HomeAssistant,

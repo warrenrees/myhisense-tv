@@ -196,6 +196,16 @@ class AsyncHisenseTV:
         """Get last known TV state."""
         return self._client.state if self._client else {}
 
+    @property
+    def is_muted(self) -> bool:
+        """Get mute status from broadcasts."""
+        return self._client.is_muted if self._client else False
+
+    @property
+    def cached_volume(self) -> Optional[int]:
+        """Get last known volume from broadcasts."""
+        return self._client.cached_volume if self._client else None
+
     # Connection methods
     async def async_connect(
         self,

@@ -152,6 +152,7 @@ class HisenseTV:
         self._last_response: Optional[dict] = None
         self._state: dict = {}
         self._cached_volume: Optional[int] = None  # Cache volume from broadcasts
+        self._cached_muted: bool = False  # Cache mute status from broadcasts
 
         # Track if we need to refresh token after connecting
         self._pending_token_refresh = False
@@ -522,14 +523,18 @@ class HisenseTV:
             # Handle volume response (broadcast topic but needs response event)
             elif "/volume" in msg.topic or "volumechange" in msg.topic:
                 _LOGGER.debug("Volume response on %s: %s", msg.topic, payload)
-                # Cache volume from broadcasts
-                for field in ["volume_value", "volume", "value"]:
-                    if field in payload:
-                        try:
-                            self._cached_volume = int(payload[field])
-                            break
-                        except (ValueError, TypeError):
-                            pass
+                volume_type = payload.get("volume_type", 0)
+                if volume_type == 0:  # Main speaker volume
+                    for field in ["volume_value", "volume", "value"]:
+                        if field in payload:
+                            try:
+                                self._cached_volume = int(payload[field])
+                                break
+                            except (ValueError, TypeError):
+                                pass
+                elif volume_type == 2:  # Mute status (0=unmuted, 1=muted)
+                    mute_val = payload.get("volume_value", 0)
+                    self._cached_muted = (mute_val == 1)
                 self._last_response = payload
                 self._response_event.set()
             # Handle broadcast state updates (don't trigger response event)
@@ -923,17 +928,19 @@ class HisenseTV:
         topic = get_topic(TOPIC_GET_VOLUME, self.client_id)
         response = self._request(topic, timeout=timeout)
         if response:
-            # Try different possible field names
-            for field in ["volume_value", "volume", "value"]:
-                if field in response:
-                    try:
-                        vol = int(response[field])
-                        self._cached_volume = vol
-                        return vol
-                    except (ValueError, TypeError):
-                        pass
-            _LOGGER.debug("Volume response has unknown format: %s", response)
-        # Return cached volume if direct request failed
+            # Only use main speaker volume (volume_type 0)
+            volume_type = response.get("volume_type", 0)
+            if volume_type == 0:
+                for field in ["volume_value", "volume", "value"]:
+                    if field in response:
+                        try:
+                            vol = int(response[field])
+                            self._cached_volume = vol
+                            return vol
+                        except (ValueError, TypeError):
+                            pass
+            _LOGGER.debug("Volume response: type=%s, data=%s", volume_type, response)
+        # Return cached volume if direct request failed or wrong type
         if self._cached_volume is not None:
             _LOGGER.debug("Using cached volume: %s", self._cached_volume)
             return self._cached_volume
@@ -943,6 +950,11 @@ class HisenseTV:
     def cached_volume(self) -> Optional[int]:
         """Get last known volume from broadcasts."""
         return self._cached_volume
+
+    @property
+    def is_muted(self) -> bool:
+        """Get mute status from broadcasts."""
+        return self._cached_muted
 
     def set_volume(self, level: int, check_state: bool = False) -> bool:
         """Set volume level.

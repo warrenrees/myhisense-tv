@@ -11,6 +11,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
+from hisense_tv import APPS
 from .const import DOMAIN, SCAN_INTERVAL, STATE_FAKE_SLEEP, CONF_DEVICE_ID
 
 _LOGGER = logging.getLogger(__name__)
@@ -166,7 +167,7 @@ class HisenseTVDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 # No state response - TV might be off or unreachable
                 is_on = False
 
-            # Get volume (only if TV is on)
+            # Get volume and mute status (only if TV is on)
             # Note: getvolume request may not work on all TVs, but volume is cached
             # from volumechange broadcasts when user changes volume
             volume = None
@@ -176,7 +177,9 @@ class HisenseTVDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     vol_start = time.monotonic()
                     # Short timeout since TV may not respond to direct volume query
                     volume = await self.tv.async_get_volume(timeout=1)
-                    _LOGGER.debug("get_volume took %.2fs, volume=%s", time.monotonic() - vol_start, volume)
+                    is_muted = self.tv.is_muted
+                    _LOGGER.debug("get_volume took %.2fs, volume=%s, muted=%s",
+                                 time.monotonic() - vol_start, volume, is_muted)
                 except Exception as err:
                     _LOGGER.debug("get_volume failed: %s", err)
 
@@ -193,9 +196,15 @@ class HisenseTVDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             source = None
             if state:
                 if statetype == "app":
-                    app = state.get("name")
+                    app_key = state.get("name", "").lower()
+                    # Get human-readable name from library's APPS dict
+                    if app_key in APPS:
+                        app = APPS[app_key].get("name", app_key)
+                    else:
+                        # Fallback: capitalize first letter
+                        app = state.get("name", "").capitalize()
                 elif statetype == "sourceswitch":
-                    source = state.get("sourcename")
+                    source = state.get("displayname") or state.get("sourcename")
 
             data = {
                 "is_on": is_on,
