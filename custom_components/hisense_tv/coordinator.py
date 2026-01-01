@@ -178,9 +178,21 @@ class HisenseTVDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     _LOGGER.debug("get_volume failed: %s", err)
 
             # Build data dict
-            # Note: TV state only contains 'statetype' field (e.g., 'remote_launcher', 'fake_sleep_0')
-            # Source and app info are NOT available from state - would need tracking when set
+            # State contains 'statetype' which indicates current activity:
+            # - 'app': running an app (has 'name', 'url', 'appId' fields)
+            # - 'sourceswitch': watching a source (has 'sourceid', 'sourcename' fields)
+            # - 'remote_launcher': at home screen
+            # - 'fake_sleep_0': TV is off/sleeping
             statetype = state.get("statetype") if state else None
+
+            # Extract current app or source based on statetype
+            app = None
+            source = None
+            if state:
+                if statetype == "app":
+                    app = state.get("name")
+                elif statetype == "sourceswitch":
+                    source = state.get("sourcename")
 
             data = {
                 "is_on": is_on,
@@ -188,10 +200,12 @@ class HisenseTVDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 "statetype": statetype,
                 "volume": volume,
                 "is_muted": is_muted,
+                "app": app,
+                "source": source,
             }
 
-            _LOGGER.debug("State data: is_on=%s, statetype=%s, volume=%s",
-                         is_on, statetype, volume)
+            _LOGGER.debug("State data: is_on=%s, statetype=%s, volume=%s, app=%s, source=%s",
+                         is_on, statetype, volume, app, source)
             _LOGGER.debug("Total update took %.2fs", time.monotonic() - start)
             return data
 

@@ -477,6 +477,8 @@ class HisenseTV:
             # Subscribe to response topics
             self._client.subscribe(TOPIC_STATE_RESPONSE)
             self._client.subscribe(TOPIC_VOLUME_RESPONSE)
+            # Volume change broadcasts (platform_service path)
+            self._client.subscribe("/remoteapp/mobile/broadcast/platform_service/actions/volumechange")
             self._client.subscribe(get_topic(TOPIC_SOURCES_RESPONSE, self.client_id))
             self._client.subscribe(get_topic(TOPIC_APPS_RESPONSE, self.client_id))
 
@@ -517,8 +519,8 @@ class HisenseTV:
                 self._response_event.set()
                 self._handle_auth_response(payload)
             # Handle volume response (broadcast topic but needs response event)
-            elif "/volume" in msg.topic:
-                _LOGGER.debug("Volume response: %s", payload)
+            elif "/volume" in msg.topic or "volumechange" in msg.topic:
+                _LOGGER.debug("Volume response on %s: %s", msg.topic, payload)
                 self._last_response = payload
                 self._response_event.set()
             # Handle broadcast state updates (don't trigger response event)
@@ -911,8 +913,15 @@ class HisenseTV:
         """
         topic = get_topic(TOPIC_GET_VOLUME, self.client_id)
         response = self._request(topic, timeout=timeout)
-        if response and "volume_value" in response:
-            return response["volume_value"]
+        if response:
+            # Try different possible field names
+            for field in ["volume_value", "volume", "value"]:
+                if field in response:
+                    try:
+                        return int(response[field])
+                    except (ValueError, TypeError):
+                        pass
+            _LOGGER.debug("Volume response has unknown format: %s", response)
         return None
 
     def set_volume(self, level: int, check_state: bool = False) -> bool:
