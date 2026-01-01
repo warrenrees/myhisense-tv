@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Iterable
+from typing import TYPE_CHECKING, Any, Iterable
 
 from homeassistant.components.remote import RemoteEntity, RemoteEntityFeature
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo, CONNECTION_NETWORK_MAC
@@ -25,18 +24,22 @@ from .coordinator import HisenseTVDataUpdateCoordinator
 # Import key utilities from the library
 from hisense_tv.keys import get_key, ALL_KEYS
 
+if TYPE_CHECKING:
+    from homeassistant.config_entries import ConfigEntry
+    from . import HisenseTVConfigEntry
+
 _LOGGER = logging.getLogger(__name__)
+
+PARALLEL_UPDATES = 1
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: HisenseTVConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Hisense TV remote from a config entry."""
-    data = hass.data[DOMAIN][entry.entry_id]
-    coordinator = data["coordinator"]
-
+    coordinator = entry.runtime_data.coordinator
     async_add_entities([HisenseTVRemote(coordinator, entry)])
 
 

@@ -5,17 +5,26 @@ from __future__ import annotations
 import logging
 import os
 import random
+from collections.abc import Mapping
 from typing import Any
 
 import voluptuous as vol
 
 from homeassistant import config_entries
 from homeassistant.components import ssdp
-from homeassistant.helpers.service_info.ssdp import ATTR_UPNP_FRIENDLY_NAME
+from homeassistant.components.ssdp import ATTR_UPNP_FRIENDLY_NAME
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.selector import (
+    NumberSelector,
+    NumberSelectorConfig,
+    NumberSelectorMode,
+    TextSelector,
+    TextSelectorConfig,
+    TextSelectorType,
+)
 
 from .const import (
     DOMAIN,
@@ -31,6 +40,7 @@ from .const import (
     DEFAULT_CERT_FILENAME,
     DEFAULT_KEY_FILENAME,
     TIMEOUT_CONNECT,
+    SCAN_INTERVAL,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -360,6 +370,30 @@ class HisenseTVConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             },
         )
 
+    async def async_step_reauth(
+        self, entry_data: Mapping[str, Any]
+    ) -> FlowResult:
+        """Handle reauthentication."""
+        self._host = entry_data[CONF_HOST]
+        self._port = entry_data.get(CONF_PORT, DEFAULT_PORT)
+        self._certfile = entry_data.get(CONF_CERTFILE)
+        self._keyfile = entry_data.get(CONF_KEYFILE)
+        self._device_id = entry_data.get(CONF_DEVICE_ID)
+        self._mac = generate_random_mac()  # New MAC for new auth
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Confirm reauth and trigger pairing."""
+        if user_input is not None:
+            return await self.async_step_pair()
+
+        return self.async_show_form(
+            step_id="reauth_confirm",
+            description_placeholders={"host": self._host},
+        )
+
     async def async_step_pair(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
@@ -401,6 +435,25 @@ class HisenseTVConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             if device_info.get("tv_name"):
                                 self._name = device_info.get("tv_name")
 
+                            new_data = {
+                                CONF_HOST: self._host,
+                                CONF_PORT: self._port,
+                                CONF_NAME: self._name,
+                                CONF_DEVICE_ID: self._device_id,
+                                CONF_MAC: self._mac,  # New MAC used for auth
+                                CONF_MODEL: self._model,
+                                CONF_SW_VERSION: self._sw_version,
+                                CONF_CERTFILE: self._certfile,
+                                CONF_KEYFILE: self._keyfile,
+                            }
+
+                            # Handle reauth - update existing entry
+                            if self.source == config_entries.SOURCE_REAUTH:
+                                return self.async_update_reload_and_abort(
+                                    self._get_reauth_entry(),
+                                    data=new_data,
+                                )
+
                             # Set unique ID to prevent duplicates
                             if self._device_id:
                                 await self.async_set_unique_id(self._device_id)
@@ -411,17 +464,7 @@ class HisenseTVConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             # Create the config entry
                             return self.async_create_entry(
                                 title=self._name,
-                                data={
-                                    CONF_HOST: self._host,
-                                    CONF_PORT: self._port,
-                                    CONF_NAME: self._name,
-                                    CONF_DEVICE_ID: self._device_id,
-                                    CONF_MAC: self._mac,  # Random MAC used for auth
-                                    CONF_MODEL: self._model,
-                                    CONF_SW_VERSION: self._sw_version,
-                                    CONF_CERTFILE: self._certfile,
-                                    CONF_KEYFILE: self._keyfile,
-                                },
+                                data=new_data,
                             )
                         else:
                             # Auth seemed to succeed but can't verify
@@ -508,9 +551,33 @@ class HisenseTVOptionsFlow(config_entries.OptionsFlow):
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
 
+        current_interval = self.config_entry.options.get("scan_interval", SCAN_INTERVAL)
+        current_mac = self.config_entry.data.get(CONF_MAC, "")
+
         return self.async_show_form(
             step_id="init",
-            data_schema=vol.Schema({}),
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        "scan_interval",
+                        default=current_interval,
+                    ): NumberSelector(
+                        NumberSelectorConfig(
+                            min=10,
+                            max=300,
+                            step=5,
+                            mode=NumberSelectorMode.SLIDER,
+                            unit_of_measurement="seconds",
+                        )
+                    ),
+                    vol.Optional(
+                        "wol_mac",
+                        default=current_mac,
+                    ): TextSelector(
+                        TextSelectorConfig(type=TextSelectorType.TEXT)
+                    ),
+                }
+            ),
         )
 
 

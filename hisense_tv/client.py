@@ -370,7 +370,7 @@ class HisenseTV:
 
             return self._connected
         except Exception as e:
-            _LOGGER.error("Connection failed: %s", e)
+            _LOGGER.debug("Connection failed: %s", e)
             # Stop loop on failure
             try:
                 self._client.loop_stop()

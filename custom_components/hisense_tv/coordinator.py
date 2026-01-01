@@ -8,6 +8,7 @@ from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -28,16 +29,20 @@ class HisenseTVDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         entry: ConfigEntry,
     ) -> None:
         """Initialize the coordinator."""
+        # Get scan interval from options, with fallback to default
+        scan_interval = entry.options.get("scan_interval", SCAN_INTERVAL)
+
         super().__init__(
             hass,
             _LOGGER,
             name=f"{DOMAIN}_{entry.entry_id}",
-            update_interval=timedelta(seconds=SCAN_INTERVAL),
+            update_interval=timedelta(seconds=scan_interval),
         )
         self.tv = tv
         self.entry = entry
         self._available = True
         self._device_info_fetched = False
+        self._auth_failures = 0
 
     @property
     def available(self) -> bool:
@@ -230,6 +235,15 @@ class HisenseTVDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         except Exception as err:
             self._available = False
+            # Check for auth-related errors that should trigger reauth
+            error_str = str(err).lower()
+            if "auth" in error_str or "unauthorized" in error_str or "forbidden" in error_str:
+                self._auth_failures += 1
+                if self._auth_failures >= 3:
+                    _LOGGER.warning("Multiple auth failures, triggering reauthentication")
+                    raise ConfigEntryAuthFailed(
+                        "Authentication failed. Please re-pair with the TV."
+                    ) from err
             raise UpdateFailed(f"Error communicating with TV: {err}") from err
 
     async def async_turn_on(self) -> None:

@@ -27,6 +27,10 @@
         "data": {
           "pin": "PIN"
         }
+      },
+      "reauth_confirm": {
+        "title": "Reauthenticate Hisense TV",
+        "description": "The TV at {host} requires reauthentication. A new PIN will be displayed on the TV."
       }
     },
     "error": {
@@ -42,15 +46,67 @@
       "cannot_connect": "Cannot connect to TV.",
       "no_host": "Could not determine TV host address.",
       "tv_not_responding": "TV is not responding. Make sure it is powered on and connected to the network.",
-      "not_hisense_tv": "Device is not a Hisense/Vidaa TV."
+      "not_hisense_tv": "Device is not a Hisense/Vidaa TV.",
+      "reauth_successful": "Reauthentication successful."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "Hisense TV Options",
-        "description": "Configure options for your Hisense TV."
+        "description": "Configure options for your Hisense TV.",
+        "data": {
+          "scan_interval": "Polling interval",
+          "wol_mac": "Wake-on-LAN MAC address"
+        },
+        "data_description": {
+          "scan_interval": "How often to poll the TV for state updates (in seconds).",
+          "wol_mac": "MAC address to use for Wake-on-LAN. Leave empty to use the default."
+        }
       }
+    }
+  },
+  "exceptions": {
+    "no_tvs_configured": {
+      "message": "No Hisense TVs are configured."
+    },
+    "command_failed": {
+      "message": "Failed to send command to TV: {error}"
+    },
+    "cannot_connect": {
+      "message": "Cannot connect to {host}. Ensure the TV is on and reachable."
+    },
+    "authentication_failed": {
+      "message": "Authentication failed. Please re-pair with the TV."
+    }
+  },
+  "issues": {
+    "certificate_missing": {
+      "title": "SSL Certificates Missing",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Add SSL Certificates",
+            "description": "The Hisense TV integration requires SSL certificates for authentication.\n\nPlease place the following files in `{cert_dir}/`:\n- `{cert_file}`\n- `{key_file}`\n\nThese can be extracted from the Vidaa APK. Click Submit after adding the files."
+          }
+        },
+        "abort": {
+          "certificates_still_missing": "Certificates are still missing. Please add the required files."
+        }
+      },
+      "description": "SSL certificates are missing from `{cert_dir}/`. The integration cannot connect to the TV without these files."
+    },
+    "connection_failed": {
+      "title": "TV Connection Failed",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "Reconnect to TV",
+            "description": "The connection to your Hisense TV at {host} has failed.\n\nPlease ensure:\n1. The TV is powered on\n2. The TV is connected to the network\n3. No firewall is blocking port 36669\n\nClick Submit to acknowledge and retry."
+          }
+        }
+      },
+      "description": "Cannot connect to TV at {host}. The TV may be off or unreachable."
     }
   },
   "services": {

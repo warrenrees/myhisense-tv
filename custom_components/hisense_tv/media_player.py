@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.media_player import (
     MediaPlayerDeviceClass,
@@ -11,9 +11,8 @@ from homeassistant.components.media_player import (
     MediaPlayerEntityFeature,
     MediaPlayerState,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_NAME
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.const import CONF_NAME
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo, CONNECTION_NETWORK_MAC
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -27,18 +26,21 @@ from .const import (
 )
 from .coordinator import HisenseTVDataUpdateCoordinator
 
+if TYPE_CHECKING:
+    from . import HisenseTVConfigEntry
+
 _LOGGER = logging.getLogger(__name__)
+
+PARALLEL_UPDATES = 1
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: HisenseTVConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Hisense TV media player from a config entry."""
-    data = hass.data[DOMAIN][entry.entry_id]
-    coordinator = data["coordinator"]
-
+    coordinator = entry.runtime_data.coordinator
     async_add_entities([HisenseTVMediaPlayer(coordinator, entry)])
 
 

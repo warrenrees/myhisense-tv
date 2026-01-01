@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from typing import Any
 
 import voluptuous as vol
@@ -10,8 +11,9 @@ import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import config_validation as cv, entity_platform
+from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError, ServiceValidationError
+from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.typing import ConfigType
 
 from .const import (
     DOMAIN,
@@ -37,10 +39,27 @@ from hisense_tv import AsyncHisenseTV
 from hisense_tv.config import get_storage
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up Hisense TV from a config entry."""
-    hass.data.setdefault(DOMAIN, {})
+@dataclass
+class HisenseTVRuntimeData:
+    """Runtime data for Hisense TV integration."""
 
+    coordinator: HisenseTVDataUpdateCoordinator
+    tv: AsyncHisenseTV
+
+
+type HisenseTVConfigEntry = ConfigEntry[HisenseTVRuntimeData]
+
+CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
+
+
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    """Set up the Hisense TV integration."""
+    await _async_setup_services(hass)
+    return True
+
+
+async def async_setup_entry(hass: HomeAssistant, entry: HisenseTVConfigEntry) -> bool:
+    """Set up Hisense TV from a config entry."""
     host = entry.data[CONF_HOST]
     port = entry.data.get(CONF_PORT, DEFAULT_PORT)
     mac = entry.data.get(CONF_MAC)
@@ -74,17 +93,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinator = HisenseTVDataUpdateCoordinator(hass, tv, entry)
     await coordinator.async_config_entry_first_refresh()
 
-    # Store coordinator
-    hass.data[DOMAIN][entry.entry_id] = {
-        "coordinator": coordinator,
-        "tv": tv,
-    }
+    # Store runtime data using the modern pattern
+    entry.runtime_data = HisenseTVRuntimeData(coordinator=coordinator, tv=tv)
 
     # Set up platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-
-    # Register services
-    await _async_setup_services(hass)
 
     # Register update listener for options
     entry.async_on_unload(entry.add_update_listener(async_update_options))
@@ -99,20 +112,50 @@ async def _async_setup_services(hass: HomeAssistant) -> None:
         """Handle send_key service call."""
         key = call.data[ATTR_KEY]
 
-        # Find target entities and send key to their coordinators
-        for entry_id, data in hass.data[DOMAIN].items():
-            coordinator = data.get("coordinator")
-            if coordinator:
-                await coordinator.async_send_key(key)
+        # Get all loaded config entries for this domain
+        entries = hass.config_entries.async_entries(DOMAIN)
+        if not entries:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="no_tvs_configured",
+            )
+
+        for entry in entries:
+            if entry.state.recoverable:
+                continue
+            runtime_data: HisenseTVRuntimeData = entry.runtime_data
+            try:
+                await runtime_data.coordinator.async_send_key(key)
+            except Exception as err:
+                raise HomeAssistantError(
+                    translation_domain=DOMAIN,
+                    translation_key="command_failed",
+                    translation_placeholders={"error": str(err)},
+                ) from err
 
     async def async_launch_app(call: ServiceCall) -> None:
         """Handle launch_app service call."""
         app = call.data[ATTR_APP]
 
-        for entry_id, data in hass.data[DOMAIN].items():
-            coordinator = data.get("coordinator")
-            if coordinator:
-                await coordinator.async_launch_app(app)
+        entries = hass.config_entries.async_entries(DOMAIN)
+        if not entries:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="no_tvs_configured",
+            )
+
+        for entry in entries:
+            if entry.state.recoverable:
+                continue
+            runtime_data: HisenseTVRuntimeData = entry.runtime_data
+            try:
+                await runtime_data.coordinator.async_launch_app(app)
+            except Exception as err:
+                raise HomeAssistantError(
+                    translation_domain=DOMAIN,
+                    translation_key="command_failed",
+                    translation_placeholders={"error": str(err)},
+                ) from err
 
     # Only register services once
     if not hass.services.has_service(DOMAIN, SERVICE_SEND_KEY):
@@ -136,19 +179,18 @@ async def _async_setup_services(hass: HomeAssistant) -> None:
         )
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: HisenseTVConfigEntry) -> bool:
     """Unload a config entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
     if unload_ok:
-        data = hass.data[DOMAIN].pop(entry.entry_id)
-        tv = data.get("tv")
-        if tv:
-            await tv.async_disconnect()
+        runtime_data = entry.runtime_data
+        if runtime_data.tv:
+            await runtime_data.tv.async_disconnect()
 
     return unload_ok
 
 
-async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def async_update_options(hass: HomeAssistant, entry: HisenseTVConfigEntry) -> None:
     """Handle options update."""
     await hass.config_entries.async_reload(entry.entry_id)
