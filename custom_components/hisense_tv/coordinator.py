@@ -115,14 +115,18 @@ class HisenseTVDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from TV."""
+        import time
+        start = time.monotonic()
+
         try:
             # Check connection
             if not self.tv.is_connected:
                 _LOGGER.debug("TV disconnected, attempting reconnect")
-                connected = await self.tv.async_connect(timeout=5)
+                connected = await self.tv.async_connect(timeout=3)
                 if not connected:
                     self._available = False
                     raise UpdateFailed("Failed to connect to TV")
+                _LOGGER.debug("Reconnect took %.2fs", time.monotonic() - start)
 
             self._available = True
 
@@ -130,7 +134,9 @@ class HisenseTVDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             await self._async_update_device_info()
 
             # Get current state
-            state = await self.tv.async_get_state(timeout=3)
+            state_start = time.monotonic()
+            state = await self.tv.async_get_state(timeout=2)
+            _LOGGER.debug("get_state took %.2fs", time.monotonic() - state_start)
 
             # Determine power state
             is_on = True
@@ -146,7 +152,9 @@ class HisenseTVDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             is_muted = False
             if is_on:
                 try:
-                    volume = await self.tv.async_get_volume(timeout=2)
+                    vol_start = time.monotonic()
+                    volume = await self.tv.async_get_volume(timeout=1)
+                    _LOGGER.debug("get_volume took %.2fs", time.monotonic() - vol_start)
                 except Exception:
                     pass
 
@@ -160,6 +168,7 @@ class HisenseTVDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 "app": state.get("currentappname") if state else None,
             }
 
+            _LOGGER.debug("Total update took %.2fs", time.monotonic() - start)
             return data
 
         except Exception as err:
