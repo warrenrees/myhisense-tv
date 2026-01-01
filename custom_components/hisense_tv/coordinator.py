@@ -155,7 +155,7 @@ class HisenseTVDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             # Get current state
             state_start = time.monotonic()
             state = await self.tv.async_get_state(timeout=3)
-            _LOGGER.debug("get_state took %.2fs", time.monotonic() - state_start)
+            _LOGGER.debug("get_state took %.2fs, raw state: %s", time.monotonic() - state_start, state)
 
             # Determine power state
             is_on = True
@@ -178,20 +178,20 @@ class HisenseTVDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     pass
 
             # Build data dict
-            source = state.get("sourcename") if state else None
-            app = state.get("currentappname") if state else None
+            # Note: TV state only contains 'statetype' field (e.g., 'remote_launcher', 'fake_sleep_0')
+            # Source and app info are NOT available from state - would need tracking when set
+            statetype = state.get("statetype") if state else None
 
             data = {
                 "is_on": is_on,
                 "state": state,
+                "statetype": statetype,
                 "volume": volume,
                 "is_muted": is_muted,
-                "source": source,
-                "app": app,
             }
 
-            _LOGGER.debug("State data: is_on=%s, volume=%s, source=%s, app=%s",
-                         is_on, volume, source, app)
+            _LOGGER.debug("State data: is_on=%s, statetype=%s, volume=%s",
+                         is_on, statetype, volume)
             _LOGGER.debug("Total update took %.2fs", time.monotonic() - start)
             return data
 
