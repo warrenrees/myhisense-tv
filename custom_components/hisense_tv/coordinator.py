@@ -136,7 +136,7 @@ class HisenseTVDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
             # Get current state
             state_start = time.monotonic()
-            state = await self.tv.async_get_state(timeout=2)
+            state = await self.tv.async_get_state(timeout=3)
             _LOGGER.debug("get_state took %.2fs", time.monotonic() - state_start)
 
             # Determine power state
@@ -154,7 +154,7 @@ class HisenseTVDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             if is_on:
                 try:
                     vol_start = time.monotonic()
-                    volume = await self.tv.async_get_volume(timeout=1)
+                    volume = await self.tv.async_get_volume(timeout=2)
                     _LOGGER.debug("get_volume took %.2fs", time.monotonic() - vol_start)
                 except Exception:
                     pass
