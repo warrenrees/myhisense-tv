@@ -111,6 +111,17 @@ class HisenseTVDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
                     # Schedule a save to persist changes
                     device_registry.async_schedule_save()
+
+                    # Also update the config entry data for future loads
+                    new_data = dict(self.entry.data)
+                    if model:
+                        new_data["model"] = model
+                    if sw_version:
+                        new_data["sw_version"] = sw_version
+                    if device_id:
+                        new_data["device_id"] = device_id
+                    self.hass.config_entries.async_update_entry(self.entry, data=new_data)
+                    _LOGGER.debug("Updated config entry data with device info")
                 else:
                     _LOGGER.debug("No device info updates needed")
             else:
@@ -167,15 +178,20 @@ class HisenseTVDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     pass
 
             # Build data dict
+            source = state.get("sourcename") if state else None
+            app = state.get("currentappname") if state else None
+
             data = {
                 "is_on": is_on,
                 "state": state,
                 "volume": volume,
                 "is_muted": is_muted,
-                "source": state.get("sourcename") if state else None,
-                "app": state.get("currentappname") if state else None,
+                "source": source,
+                "app": app,
             }
 
+            _LOGGER.debug("State data: is_on=%s, volume=%s, source=%s, app=%s",
+                         is_on, volume, source, app)
             _LOGGER.debug("Total update took %.2fs", time.monotonic() - start)
             return data
 
