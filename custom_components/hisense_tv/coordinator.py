@@ -12,7 +12,8 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from hisense_tv import APPS
-from .const import DOMAIN, SCAN_INTERVAL, STATE_FAKE_SLEEP, CONF_DEVICE_ID
+from hisense_tv.wol import wake_tv
+from .const import DOMAIN, SCAN_INTERVAL, STATE_FAKE_SLEEP, CONF_DEVICE_ID, CONF_HOST
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -226,7 +227,20 @@ class HisenseTVDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             raise UpdateFailed(f"Error communicating with TV: {err}") from err
 
     async def async_turn_on(self) -> None:
-        """Turn TV on."""
+        """Turn TV on using WoL and power command."""
+        # Get MAC from device_id
+        device_id = self.entry.data.get(CONF_DEVICE_ID)
+        if device_id and len(device_id) == 12:
+            # Format as MAC address
+            mac = ":".join(device_id[i:i+2] for i in range(0, 12, 2))
+            # Get subnet from host IP
+            host = self.entry.data.get(CONF_HOST, "")
+            subnet = host.rsplit(".", 1)[0] if "." in host else None
+            # Send WoL in executor (blocking call)
+            _LOGGER.debug("Sending WoL to %s", mac)
+            await self.hass.async_add_executor_job(wake_tv, mac, subnet)
+
+        # Also send power on command
         await self.tv.async_power_on()
         await self.async_request_refresh()
 

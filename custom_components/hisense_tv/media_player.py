@@ -165,21 +165,23 @@ class HisenseTVMediaPlayer(CoordinatorEntity[HisenseTVDataUpdateCoordinator], Me
         """Update source list from TV."""
         try:
             sources = await self.coordinator.async_get_sources()
-            if sources:
+            if sources and isinstance(sources, list):
                 self._sources = sources
-                self._source_list = [
-                    s.get("sourcename", s.get("name", f"Source {s.get('sourceid', '?')}"))
-                    for s in sources
-                ]
+                self._source_list = []
+                for s in sources:
+                    if isinstance(s, dict):
+                        name = s.get("sourcename", s.get("name", f"Source {s.get('sourceid', '?')}"))
+                        self._source_list.append(name)
 
             apps = await self.coordinator.async_get_apps()
-            if apps:
+            if apps and isinstance(apps, list):
                 self._apps = apps
                 # Add app names to source list
                 for app in apps:
-                    name = app.get("name")
-                    if name and name not in self._source_list:
-                        self._source_list.append(name)
+                    if isinstance(app, dict):
+                        name = app.get("name")
+                        if name and name not in self._source_list:
+                            self._source_list.append(name)
 
         except Exception as err:
             _LOGGER.debug("Error updating sources: %s", err)

@@ -413,26 +413,18 @@ def cmd_wake(args):
     tv_id = getattr(args, 'tv', None)
     tv_config = get_tv_config(tv_id) if tv_id else get_default_tv()
 
-    if not tv_config:
-        print("No TV configured. Use 'tv config add <ip>' first.", file=sys.stderr)
-        return 1
+    # Get MAC from command line or config
+    mac = getattr(args, 'mac', None)
+    host = getattr(args, 'ip', None)
 
-    # Get MAC from device_id or mac field
-    mac = tv_config.get("device_id") or tv_config.get("mac")
-    host = tv_config.get("host")
+    if not mac and tv_config:
+        mac = tv_config.get("device_id") or tv_config.get("mac")
+        host = host or tv_config.get("host")
 
     if not mac:
-        print("TV MAC address not known.", file=sys.stderr)
-        print("Run 'tv auth pair' to authenticate and store device info.", file=sys.stderr)
-
-        # Try to auto-detect
-        if host:
-            print(f"\nTrying to detect MAC from {host}...")
-            detected = get_mac_from_ip(host)
-            if detected:
-                print(f"Detected MAC: {detected}")
-            else:
-                print("Could not detect MAC (TV may be off)")
+        print("No MAC address specified.", file=sys.stderr)
+        print("Use: tv wake --mac AA:BB:CC:DD:EE:FF", file=sys.stderr)
+        print("Or configure a TV first: tv config add <ip>", file=sys.stderr)
         return 1
 
     # Format MAC if it's a device_id (no colons)
@@ -798,6 +790,7 @@ def main():
 
     # Wake-on-LAN
     p_wake = subparsers.add_parser("wake", help="Wake TV using Wake-on-LAN")
+    p_wake.add_argument("--mac", help="TV MAC address (e.g., AA:BB:CC:DD:EE:FF)")
     p_wake.set_defaults(func=cmd_wake)
 
     # Turn on (wake + verify)
