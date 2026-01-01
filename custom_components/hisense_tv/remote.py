@@ -22,63 +22,10 @@ from .const import (
 )
 from .coordinator import HisenseTVDataUpdateCoordinator
 
-_LOGGER = logging.getLogger(__name__)
+# Import key utilities from the library
+from hisense_tv.keys import get_key, ALL_KEYS
 
-# Mapping of common remote button names to TV key codes
-KEY_MAPPING = {
-    # Power
-    "power": "KEY_POWER",
-    "power_on": "KEY_POWER",
-    "power_off": "KEY_POWER",
-    # Navigation
-    "up": "KEY_UP",
-    "down": "KEY_DOWN",
-    "left": "KEY_LEFT",
-    "right": "KEY_RIGHT",
-    "select": "KEY_OK",
-    "ok": "KEY_OK",
-    "enter": "KEY_OK",
-    # Menu
-    "back": "KEY_RETURNS",
-    "return": "KEY_RETURNS",
-    "menu": "KEY_MENU",
-    "home": "KEY_HOME",
-    "exit": "KEY_EXIT",
-    # Volume
-    "volume_up": "KEY_VOLUMEUP",
-    "volume_down": "KEY_VOLUMEDOWN",
-    "mute": "KEY_MUTE",
-    # Playback
-    "play": "KEY_PLAY",
-    "pause": "KEY_PAUSE",
-    "stop": "KEY_STOP",
-    "fast_forward": "KEY_FAST_FORWARD",
-    "rewind": "KEY_REWIND",
-    "ff": "KEY_FAST_FORWARD",
-    "rw": "KEY_REWIND",
-    # Channels
-    "channel_up": "KEY_CHANNELUP",
-    "channel_down": "KEY_CHANNELDOWN",
-    # Numbers
-    "0": "KEY_0",
-    "1": "KEY_1",
-    "2": "KEY_2",
-    "3": "KEY_3",
-    "4": "KEY_4",
-    "5": "KEY_5",
-    "6": "KEY_6",
-    "7": "KEY_7",
-    "8": "KEY_8",
-    "9": "KEY_9",
-    # Colors
-    "red": "KEY_RED",
-    "green": "KEY_GREEN",
-    "yellow": "KEY_YELLOW",
-    "blue": "KEY_BLUE",
-    # Extras
-    "info": "KEY_INFO",
-    "subtitle": "KEY_SUBTITLE",
-}
+_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
@@ -189,17 +136,26 @@ class HisenseTVRemote(CoordinatorEntity[HisenseTVDataUpdateCoordinator], RemoteE
         await self.coordinator.async_turn_off()
 
     async def async_send_command(self, command: Iterable[str], **kwargs: Any) -> None:
-        """Send remote commands."""
+        """Send remote commands.
+
+        Supports all keys from the hisense_tv library including:
+        - Navigation: up, down, left, right, ok, enter, select
+        - Menu: back, return, menu, home, exit
+        - Volume: volumeup, volup, vol+, volumedown, voldown, vol-, mute
+        - Playback: play, pause, stop, forward, ff, rewind, rw
+        - Numbers: 0-9
+        - Channels: channelup, chup, ch+, channeldown, chdown, ch-
+        - Colors: red, green, yellow, blue
+        - Extras: info, subtitle, sub, power
+        - Mouse: mouse, zoomin, zoomout
+        """
         num_repeats = kwargs.get("num_repeats", 1)
         delay_secs = kwargs.get("delay_secs", 0.2)
 
         for _ in range(num_repeats):
             for cmd in command:
-                # Map common names to TV keys
-                key = KEY_MAPPING.get(cmd.lower(), cmd.upper())
-                if not key.startswith("KEY_"):
-                    key = f"KEY_{key}"
-
+                # Use the library's key mapping which supports all keys
+                key = get_key(cmd)
                 await self.coordinator.async_send_key(key)
 
                 if delay_secs > 0:

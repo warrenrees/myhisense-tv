@@ -8,9 +8,10 @@ from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import DOMAIN, SCAN_INTERVAL, STATE_FAKE_SLEEP
+from .const import DOMAIN, SCAN_INTERVAL, STATE_FAKE_SLEEP, CONF_DEVICE_ID
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -34,11 +35,57 @@ class HisenseTVDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.tv = tv
         self.entry = entry
         self._available = True
+        self._device_info_fetched = False
 
     @property
     def available(self) -> bool:
         """Return if TV is available."""
         return self._available
+
+    async def _async_update_device_info(self) -> None:
+        """Fetch and update device info in the device registry."""
+        if self._device_info_fetched:
+            return
+
+        try:
+            device_info = await self.tv.async_get_device_info(timeout=5)
+            if not device_info:
+                return
+
+            device_id = self.entry.data.get(CONF_DEVICE_ID)
+            if not device_id:
+                device_id = device_info.get("network_type")
+
+            if not device_id:
+                return
+
+            # Update device registry
+            device_registry = dr.async_get(self.hass)
+            device_entry = device_registry.async_get_device(
+                identifiers={(DOMAIN, device_id)}
+            )
+
+            if device_entry:
+                updates = {}
+                model = device_info.get("model_name")
+                sw_version = device_info.get("tv_version")
+                name = device_info.get("tv_name")
+
+                if model and model != device_entry.model:
+                    updates["model"] = model
+                if sw_version and sw_version != device_entry.sw_version:
+                    updates["sw_version"] = sw_version
+                if name and name != device_entry.name:
+                    updates["name"] = name
+
+                if updates:
+                    device_registry.async_update_device(device_entry.id, **updates)
+                    _LOGGER.debug("Updated device info: %s", updates)
+
+            self._device_info_fetched = True
+
+        except Exception as err:
+            _LOGGER.debug("Error fetching device info: %s", err)
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from TV."""
@@ -52,6 +99,9 @@ class HisenseTVDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     raise UpdateFailed("Failed to connect to TV")
 
             self._available = True
+
+            # Update device info on first successful connection
+            await self._async_update_device_info()
 
             # Get current state
             state = await self.tv.async_get_state(timeout=3)
