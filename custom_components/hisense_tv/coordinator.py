@@ -167,12 +167,15 @@ class HisenseTVDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 is_on = False
 
             # Get volume (only if TV is on)
+            # Note: getvolume request may not work on all TVs, but volume is cached
+            # from volumechange broadcasts when user changes volume
             volume = None
             is_muted = False
             if is_on:
                 try:
                     vol_start = time.monotonic()
-                    volume = await self.tv.async_get_volume(timeout=3)
+                    # Short timeout since TV may not respond to direct volume query
+                    volume = await self.tv.async_get_volume(timeout=1)
                     _LOGGER.debug("get_volume took %.2fs, volume=%s", time.monotonic() - vol_start, volume)
                 except Exception as err:
                     _LOGGER.debug("get_volume failed: %s", err)
