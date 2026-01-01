@@ -7,7 +7,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="myhisense-tv",
-    version="1.5.7",
+    version="1.5.8",
     author="Warren Rees",
     author_email="",
     description="Control Hisense/Vidaa Smart TVs via MQTT",
