@@ -97,8 +97,12 @@ class HisenseTVDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     updates["name"] = name
 
                 if updates:
+                    # Update the device in the registry
                     device_registry.async_update_device(device_entry.id, **updates)
-                    _LOGGER.info("Updated device info: %s", updates)
+                    _LOGGER.info("Updated device info for %s: %s", device_entry.id, updates)
+
+                    # Schedule a save to persist changes
+                    device_registry.async_schedule_save()
                 else:
                     _LOGGER.debug("No device info updates needed")
             else:
