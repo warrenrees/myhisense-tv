@@ -372,25 +372,48 @@ class HisenseTVConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 else:
                     # Authenticate with PIN
                     success = await tv.async_authenticate(pin, timeout=10)
-                    await tv.async_disconnect()
 
                     if success:
-                        # Create the config entry
-                        return self.async_create_entry(
-                            title=self._name,
-                            data={
-                                CONF_HOST: self._host,
-                                CONF_PORT: self._port,
-                                CONF_NAME: self._name,
-                                CONF_DEVICE_ID: self._device_id,
-                                CONF_MAC: self._mac,  # Random MAC used for auth
-                                CONF_MODEL: self._model,
-                                CONF_SW_VERSION: self._sw_version,
-                                CONF_CERTFILE: self._certfile,
-                                CONF_KEYFILE: self._keyfile,
-                            },
-                        )
+                        # Verify we're actually authenticated by getting device info
+                        device_info = await tv.async_get_device_info(timeout=5)
+                        await tv.async_disconnect()
+
+                        if device_info:
+                            # Update device info from successful connection
+                            self._device_id = device_info.get("network_type") or self._device_id
+                            self._model = device_info.get("model_name") or self._model
+                            self._sw_version = device_info.get("tv_version") or self._sw_version
+                            if device_info.get("tv_name"):
+                                self._name = device_info.get("tv_name")
+
+                            # Set unique ID to prevent duplicates
+                            if self._device_id:
+                                await self.async_set_unique_id(self._device_id)
+                                self._abort_if_unique_id_configured(
+                                    updates={CONF_HOST: self._host, CONF_PORT: self._port}
+                                )
+
+                            # Create the config entry
+                            return self.async_create_entry(
+                                title=self._name,
+                                data={
+                                    CONF_HOST: self._host,
+                                    CONF_PORT: self._port,
+                                    CONF_NAME: self._name,
+                                    CONF_DEVICE_ID: self._device_id,
+                                    CONF_MAC: self._mac,  # Random MAC used for auth
+                                    CONF_MODEL: self._model,
+                                    CONF_SW_VERSION: self._sw_version,
+                                    CONF_CERTFILE: self._certfile,
+                                    CONF_KEYFILE: self._keyfile,
+                                },
+                            )
+                        else:
+                            # Auth seemed to succeed but can't verify
+                            _LOGGER.warning("Auth succeeded but could not get device info")
+                            errors["base"] = "auth_verify_failed"
                     else:
+                        await tv.async_disconnect()
                         errors["base"] = "invalid_pin"
 
             except Exception as err:
@@ -412,6 +435,7 @@ class HisenseTVConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             enable_persistence=False,
         )
 
+        pin_shown = False
         try:
             connected = await tv.async_connect(timeout=TIMEOUT_CONNECT)
             if connected:
@@ -420,8 +444,17 @@ class HisenseTVConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 import asyncio
                 await asyncio.sleep(1)
                 await tv.async_disconnect()
+                pin_shown = True
+            else:
+                errors["base"] = "cannot_connect"
         except Exception as err:
             _LOGGER.warning("Could not trigger PIN dialog: %s", err)
+            errors["base"] = "cannot_connect"
+
+        # Only show PIN form if we successfully triggered the dialog
+        if not pin_shown and not user_input:
+            # Can't show PIN on TV - abort with helpful message
+            return self.async_abort(reason="tv_not_responding")
 
         return self.async_show_form(
             step_id="pair",

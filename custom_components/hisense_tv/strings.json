@@ -34,12 +34,14 @@
       "certs_not_found": "Certificate files not found. Please check the paths and ensure the files exist.",
       "invalid_pin": "Invalid PIN. Please check the PIN on your TV and try again.",
       "pairing_failed": "Pairing failed. Please try again.",
+      "auth_verify_failed": "Authentication succeeded but could not verify. Please try again.",
       "unknown": "An unexpected error occurred."
     },
     "abort": {
       "already_configured": "This TV is already configured.",
       "cannot_connect": "Cannot connect to TV.",
-      "no_host": "Could not determine TV host address."
+      "no_host": "Could not determine TV host address.",
+      "tv_not_responding": "TV is not responding. Make sure it is powered on and connected to the network."
     }
   },
   "options": {
