@@ -110,6 +110,23 @@ class HisenseTVRemote(CoordinatorEntity[HisenseTVDataUpdateCoordinator], RemoteE
         self._entry = entry
         self._device_id = entry.data.get(CONF_DEVICE_ID)
         self._attr_unique_id = f"{self._device_id}_remote" if self._device_id else f"{entry.entry_id}_remote"
+        self._apps: list[dict] = []
+        self._activity_list: list[str] = []
+
+    async def async_added_to_hass(self) -> None:
+        """Run when entity is added to hass."""
+        await super().async_added_to_hass()
+        await self._async_update_activities()
+
+    async def _async_update_activities(self) -> None:
+        """Update activity list from TV."""
+        try:
+            apps = await self.coordinator.async_get_apps()
+            if apps:
+                self._apps = apps
+                self._activity_list = [app.get("name") for app in apps if app.get("name")]
+        except Exception as err:
+            _LOGGER.debug("Error updating activities: %s", err)
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -158,12 +175,14 @@ class HisenseTVRemote(CoordinatorEntity[HisenseTVDataUpdateCoordinator], RemoteE
     @property
     def activity_list(self) -> list[str] | None:
         """Return list of activities (apps)."""
-        # Could populate with apps list
-        return None
+        return self._activity_list if self._activity_list else None
 
-    async def async_turn_on(self, **kwargs: Any) -> None:
-        """Turn the TV on."""
+    async def async_turn_on(self, activity: str | None = None, **kwargs: Any) -> None:
+        """Turn the TV on and optionally start an activity."""
         await self.coordinator.async_turn_on()
+        if activity:
+            # Launch the app/activity
+            await self.coordinator.async_launch_app(activity)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the TV off."""
