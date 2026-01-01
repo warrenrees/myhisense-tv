@@ -488,6 +488,13 @@ def probe_ip(
         if mac and ':' not in mac and len(mac) == 12:
             mac = ':'.join(mac[i:i+2] for i in range(0, 12, 2))
 
+        # Check for Vidaa support - only consider devices with vidaa_support=1
+        vidaa_support = raw_data.get('vidaa_support', '0')
+        if vidaa_support != '1':
+            _LOGGER.debug("Device at %s does not have vidaa_support=1 (got %s), skipping",
+                         ip, vidaa_support)
+            return None
+
         device = DiscoveredTV(
             ip=ip,
             name=name,
@@ -499,7 +506,7 @@ def probe_ip(
             raw_data=raw_data,
         )
 
-        _LOGGER.info("Found TV at %s: %s", ip, name)
+        _LOGGER.info("Found Hisense TV at %s: %s (vidaa_support=%s)", ip, name, vidaa_support)
         return device
 
     except urllib.error.URLError as e:

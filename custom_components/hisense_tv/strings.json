@@ -41,7 +41,8 @@
       "already_configured": "This TV is already configured.",
       "cannot_connect": "Cannot connect to TV.",
       "no_host": "Could not determine TV host address.",
-      "tv_not_responding": "TV is not responding. Make sure it is powered on and connected to the network."
+      "tv_not_responding": "TV is not responding. Make sure it is powered on and connected to the network.",
+      "not_hisense_tv": "Device is not a Hisense/Vidaa TV."
     }
   },
   "options": {

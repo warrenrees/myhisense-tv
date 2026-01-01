@@ -273,6 +273,21 @@ class HisenseTVConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle SSDP discovery."""
         _LOGGER.debug("SSDP discovery: %s", discovery_info)
 
+        # Check for vidaa_support=1 in modelDescription to filter non-Hisense devices
+        model_desc = discovery_info.upnp.get("modelDescription", "")
+        vidaa_support = False
+        for line in model_desc.split('\n'):
+            if '=' in line:
+                key, _, value = line.partition('=')
+                if key.strip() == 'vidaa_support' and value.strip() == '1':
+                    vidaa_support = True
+                    break
+
+        if not vidaa_support:
+            _LOGGER.debug("SSDP device does not have vidaa_support=1, ignoring: %s",
+                         discovery_info.ssdp_headers.get("_host"))
+            return self.async_abort(reason="not_hisense_tv")
+
         # Extract host from discovery
         self._host = discovery_info.ssdp_headers.get("_host") or discovery_info.ssdp_location
         if self._host and "://" in self._host:
