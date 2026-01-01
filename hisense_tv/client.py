@@ -516,6 +516,11 @@ class HisenseTV:
                 self._last_response = payload
                 self._response_event.set()
                 self._handle_auth_response(payload)
+            # Handle volume response (broadcast topic but needs response event)
+            elif "/volume" in msg.topic:
+                _LOGGER.debug("Volume response: %s", payload)
+                self._last_response = payload
+                self._response_event.set()
             # Handle broadcast state updates (don't trigger response event)
             elif "broadcast" in msg.topic:
                 self._state = payload

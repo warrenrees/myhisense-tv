@@ -172,10 +172,10 @@ class HisenseTVDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             if is_on:
                 try:
                     vol_start = time.monotonic()
-                    volume = await self.tv.async_get_volume(timeout=2)
-                    _LOGGER.debug("get_volume took %.2fs", time.monotonic() - vol_start)
-                except Exception:
-                    pass
+                    volume = await self.tv.async_get_volume(timeout=3)
+                    _LOGGER.debug("get_volume took %.2fs, volume=%s", time.monotonic() - vol_start, volume)
+                except Exception as err:
+                    _LOGGER.debug("get_volume failed: %s", err)
 
             # Build data dict
             # Note: TV state only contains 'statetype' field (e.g., 'remote_launcher', 'fake_sleep_0')
