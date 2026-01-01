@@ -68,6 +68,17 @@ class HisenseTVRemote(CoordinatorEntity[HisenseTVDataUpdateCoordinator], RemoteE
         await super().async_added_to_hass()
         await self._async_update_activities()
 
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        # If TV is on and we don't have activities yet, try to fetch them
+        if (
+            self.coordinator.data
+            and self.coordinator.data.get("is_on")
+            and not self._activity_list
+        ):
+            self.hass.async_create_task(self._async_update_activities())
+        super()._handle_coordinator_update()
+
     async def _async_update_activities(self) -> None:
         """Update activity list from TV."""
         try:
@@ -75,6 +86,7 @@ class HisenseTVRemote(CoordinatorEntity[HisenseTVDataUpdateCoordinator], RemoteE
             if apps:
                 self._apps = apps
                 self._activity_list = [app.get("name") for app in apps if app.get("name")]
+                _LOGGER.debug("Updated activity list with %d apps", len(self._activity_list))
         except Exception as err:
             _LOGGER.debug("Error updating activities: %s", err)
 

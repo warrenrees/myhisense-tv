@@ -166,6 +166,17 @@ class HisenseTVMediaPlayer(CoordinatorEntity[HisenseTVDataUpdateCoordinator], Me
         # Fetch sources and apps
         await self._async_update_sources()
 
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        # If TV is on and we don't have sources yet, try to fetch them
+        if (
+            self.coordinator.data
+            and self.coordinator.data.get("is_on")
+            and not self._source_list
+        ):
+            self.hass.async_create_task(self._async_update_sources())
+        super()._handle_coordinator_update()
+
     async def _async_update_sources(self) -> None:
         """Update source list from TV."""
         try:
@@ -187,6 +198,8 @@ class HisenseTVMediaPlayer(CoordinatorEntity[HisenseTVDataUpdateCoordinator], Me
                         name = app.get("name")
                         if name and name not in self._source_list:
                             self._source_list.append(name)
+
+            _LOGGER.debug("Updated source list with %d entries", len(self._source_list))
 
         except Exception as err:
             _LOGGER.debug("Error updating sources: %s", err)
