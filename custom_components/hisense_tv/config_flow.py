@@ -11,8 +11,9 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant import config_entries
+from async_upnp_client.const import ATTR_UPNP_FRIENDLY_NAME
+
 from homeassistant.components import ssdp
-from homeassistant.components.ssdp import ATTR_UPNP_FRIENDLY_NAME
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
