@@ -6,6 +6,7 @@ and selects the appropriate authentication method.
 
 import logging
 import re
+import time
 import urllib.request
 import urllib.error
 import xml.etree.ElementTree as ET
@@ -28,7 +29,13 @@ class AuthMethod(Enum):
     MODERN = "modern"    # >= 3290: XOR username, new suffix
 
 
-def detect_protocol(host: str, port: int = UPNP_PORT, timeout: float = 5.0) -> Optional[int]:
+def detect_protocol(
+    host: str,
+    port: int = UPNP_PORT,
+    timeout: float = 5.0,
+    retries: int = 2,
+    retry_delay: float = 0.5,
+) -> Optional[int]:
     """Detect transport protocol version from TV's UPnP XML descriptor.
 
     Fetches http://{host}:{port}/MediaServer/rendererdevicedesc.xml and
@@ -38,19 +45,36 @@ def detect_protocol(host: str, port: int = UPNP_PORT, timeout: float = 5.0) -> O
         host: TV IP address or hostname
         port: HTTP port (default 38400)
         timeout: Request timeout in seconds
+        retries: Extra attempts on transient network errors (these TVs
+            intermittently drop off the network, e.g. EHOSTUNREACH)
+        retry_delay: Seconds to wait between attempts
 
     Returns:
         Transport protocol version as integer, or None if detection fails
     """
     url = f"http://{host}:{port}/MediaServer/rendererdevicedesc.xml"
 
+    xml_content = None
+    for attempt in range(retries + 1):
+        try:
+            _LOGGER.debug("Fetching protocol info from %s (attempt %d/%d)",
+                          url, attempt + 1, retries + 1)
+            request = urllib.request.Request(url)
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                xml_content = response.read().decode('utf-8')
+            break
+        except urllib.error.URLError as e:
+            if attempt < retries:
+                _LOGGER.debug("Protocol fetch failed (%s), retrying...", e)
+                time.sleep(retry_delay)
+                continue
+            _LOGGER.warning("Failed to fetch protocol info: %s", e)
+            return None
+
+    if xml_content is None:
+        return None
+
     try:
-        _LOGGER.debug("Fetching protocol info from %s", url)
-
-        request = urllib.request.Request(url)
-        with urllib.request.urlopen(request, timeout=timeout) as response:
-            xml_content = response.read().decode('utf-8')
-
         # Parse XML and find transport_protocol
         root = ET.fromstring(xml_content)
 
@@ -84,9 +108,6 @@ def detect_protocol(host: str, port: int = UPNP_PORT, timeout: float = 5.0) -> O
         _LOGGER.warning("transport_protocol not found in XML response")
         return None
 
-    except urllib.error.URLError as e:
-        _LOGGER.warning("Failed to fetch protocol info: %s", e)
-        return None
     except ET.ParseError as e:
         _LOGGER.warning("Failed to parse XML response: %s", e)
         return None

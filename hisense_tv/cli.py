@@ -25,6 +25,42 @@ from .keys import KEY_NAME_MAP, ALL_KEYS
 from .wol import wake_tv, get_mac_from_ip
 
 
+def _looks_like_mac(value: Optional[str]) -> bool:
+    """Return True if value looks like a MAC/UUID rather than an IP address."""
+    if not value:
+        return False
+    # IPs contain dots; MACs use colons/dashes or are 12 hex chars
+    if "." in value:
+        return False
+    return ":" in value or "-" in value or len(value) == 12
+
+
+def _resolve_mac_for_ip(ip: str) -> Optional[str]:
+    """Resolve a TV's MAC address for dynamic-auth credentials.
+
+    Looks for a matching host in config first, then falls back to a live UPnP
+    probe. The MAC is needed to build a stable client_id; without it the client
+    silently degrades to static credentials and the TV rejects the connection
+    (MQTT CONNACK code 5).
+    """
+    # Check existing config for a TV at this IP with a stored MAC.
+    # list_tvs() returns dicts with device_id + config fields merged in.
+    for cfg in list_tvs():
+        if cfg.get("host") == ip:
+            mac = cfg.get("mac") or cfg.get("device_id")
+            if _looks_like_mac(mac):
+                return mac
+
+    # Fall back to a live probe of the UPnP descriptor
+    try:
+        device = probe_ip(ip, timeout=3.0)
+        if device and device.mac:
+            return device.mac
+    except Exception:
+        pass
+    return None
+
+
 def create_tv_client(tv_id: Optional[str] = None, ip: Optional[str] = None) -> HisenseTV:
     """Create TV client with config settings.
 
@@ -36,10 +72,13 @@ def create_tv_client(tv_id: Optional[str] = None, ip: Optional[str] = None) -> H
         Configured HisenseTV client
     """
     if ip:
-        # Direct IP override - use defaults for other settings
+        # Direct IP override - still resolve the MAC so dynamic auth can build a
+        # valid client_id (otherwise we silently fall back to static creds -> rc=5).
+        mac_address = _resolve_mac_for_ip(ip)
         return HisenseTV(
             host=ip,
             port=DEFAULT_PORT,
+            mac_address=mac_address,
             use_dynamic_auth=True,
             brand="his",
         )
@@ -55,8 +94,14 @@ def create_tv_client(tv_id: Optional[str] = None, ip: Optional[str] = None) -> H
     host = tv_config.get("host")
     port = tv_config.get("port", DEFAULT_PORT)
     brand = tv_config.get("brand", "his")
-    # MAC/UUID for dynamic auth - prefer device_id (network_type)
-    mac_address = tv_config.get("device_id") or tv_config.get("mac")
+    # MAC/UUID for dynamic auth - prefer a real MAC over the device_id, which may
+    # just be the IP placeholder set by 'config add' before pairing.
+    mac_address = tv_config.get("mac") or tv_config.get("device_id")
+    if not _looks_like_mac(mac_address) and host:
+        # device_id is the IP placeholder - try to resolve a real MAC
+        resolved = _resolve_mac_for_ip(host)
+        if resolved:
+            mac_address = resolved
 
     if not host:
         raise ValueError(f"TV '{tv_id or 'default'}' has no host configured.")
@@ -310,11 +355,41 @@ def cmd_config(args):
             return 1
         ip = args.value
         alias = args.alias if hasattr(args, 'alias') and args.alias else None
-        add_tv(ip, ip, alias=alias)  # Use IP as temporary device_id until paired
+
+        # Probe the TV so we can persist its MAC (needed for dynamic-auth
+        # credentials), name and protocol version instead of just the IP.
+        extra = {}
+        try:
+            device = probe_ip(ip, timeout=3.0)
+        except Exception:
+            device = None
+        if device:
+            if device.mac:
+                extra["mac"] = device.mac
+            if device.name:
+                extra["name"] = device.name
+            if device.protocol_version:
+                extra["protocol_version"] = device.protocol_version
+
+        add_tv(ip, ip, alias=alias, **extra)  # Use IP as device_id until paired
         print(f"Added TV at {ip}")
+        if device and device.name:
+            print(f"  Name:  {device.name}")
+        if extra.get("mac"):
+            print(f"  MAC:   {extra['mac']}")
+        else:
+            print("  MAC:   (not found - TV may be off; re-run when it is on)")
         if alias:
             print(f"  Alias: {alias}")
-        print("Use 'tv auth pair' to authenticate with this TV.")
+
+        # Make this the default if it's the only TV, and say so explicitly.
+        config = load_config()
+        if config.get("default_tv") == ip:
+            print(f"  Default TV is now: {ip}")
+        else:
+            print(f"  Default TV remains: {config.get('default_tv')}")
+            print(f"  (use 'tv --ip {ip} auth pair' to pair this TV specifically)")
+        print("Use 'tv auth pair' to authenticate with the default TV.")
 
     elif args.action == "set-default":
         if not args.value:
@@ -526,7 +601,7 @@ def cmd_monitor(args):
     device_id = tv_config.get("device_id") if tv_config else None
     token_data = storage.get_token(device_id) if device_id else None
     if not token_data:
-        token_data = storage.get_token(host, port)
+        token_data = storage.get_token(host=host, port=port)
     if not token_data:
         print("No stored credentials. Run './tv auth pair' first.")
         return 1
@@ -633,7 +708,7 @@ def cmd_auth(args):
     if args.action == "status":
         status = storage.get_token_status(device_id) if device_id else None
         if not status or not status.get("has_token"):
-            status = storage.get_token_status(host, port)
+            status = storage.get_token_status(host=host, port=port)
 
         if not status["has_token"]:
             print("No stored credentials. Run 'tv auth pair' to authenticate.")
@@ -662,7 +737,7 @@ def cmd_auth(args):
             print("\n  Both tokens expired. Run 'tv auth pair' to re-authenticate.")
 
     elif args.action == "pair":
-        print("Starting pairing process...")
+        print(f"Starting pairing with {host}:{port} ...")
         tv = create_tv_client(tv_id, args.ip)
 
         if tv.connect(timeout=10):
@@ -686,7 +761,13 @@ def cmd_auth(args):
                 tv.disconnect()
                 return 1
         else:
-            print("Failed to connect to TV", file=sys.stderr)
+            print(f"Failed to connect to {host}:{port}", file=sys.stderr)
+            print(
+                "If the TV is reachable but auth is refused (MQTT code 5), check "
+                "that the TV's clock is correct (date/time, timezone and DST) - "
+                "credentials are time-based and a clock skew is rejected.",
+                file=sys.stderr,
+            )
             return 1
 
     elif args.action == "clear":

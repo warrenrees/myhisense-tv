@@ -149,6 +149,9 @@ class HisenseTV:
         self._connected = False
         self._response_event = threading.Event()
         self._auth_event = threading.Event()
+        # Set once the access token has actually been received and saved, so
+        # pairing can wait for persistence instead of returning on PIN-accept.
+        self._token_event = threading.Event()
         self._last_response: Optional[dict] = None
         self._state: dict = {}
         self._cached_volume: Optional[int] = None  # Cache volume from broadcasts
@@ -222,6 +225,13 @@ class HisenseTV:
                 auth_label = self._auth_method.value if self._auth_method else "auto"
                 _LOGGER.debug("Using dynamic auth (%s): client_id=%s...", auth_label, creds.client_id[:30])
             else:
+                if use_dynamic_auth and not mac_address:
+                    _LOGGER.warning(
+                        "Dynamic auth requested but no MAC address available; "
+                        "falling back to static credentials. The TV will likely "
+                        "reject this (MQTT code 5). Provide the TV's MAC so a valid "
+                        "client_id can be generated."
+                    )
                 # Use static credentials
                 self._mqtt_client_id = f"hisense_{client_id}_{int(time.time())}"
                 self._username = username
@@ -278,7 +288,7 @@ class HisenseTV:
         if not self._storage:
             return None
 
-        token_data = self._storage.get_token(self.host, self.port)
+        token_data = self._storage.get_token(host=self.host, port=self.port)
         if not token_data:
             return None
 
@@ -292,7 +302,7 @@ class HisenseTV:
             return None
 
         # Get token status
-        status = self._storage.get_token_status(self.host, self.port)
+        status = self._storage.get_token_status(host=self.host, port=self.port)
 
         return {
             "client_id": client_id,
@@ -317,7 +327,7 @@ class HisenseTV:
         if not self._storage:
             return False
 
-        token_data = self._storage.get_token(self.host, self.port)
+        token_data = self._storage.get_token(host=self.host, port=self.port)
         if token_data and not token_data.get("needs_refresh"):
             self._access_token = token_data.get("access_token")
             self._authenticated = True
@@ -512,7 +522,19 @@ class HisenseTV:
             if self._access_token:
                 self._authenticated = True
         else:
-            _LOGGER.error("Connection failed with code: %s", rc)
+            # Map common MQTT CONNACK codes to actionable messages.
+            reasons = {
+                1: "unacceptable protocol version",
+                2: "client_id rejected",
+                3: "server unavailable",
+                4: "bad username or password",
+                5: "not authorized - check the TV clock (date/time, timezone, DST); "
+                   "time-based credentials are rejected when clocks disagree, and "
+                   "stale saved tokens can also cause this (try 'tv auth clear')",
+            }
+            detail = reasons.get(rc, "unknown error")
+            _LOGGER.error("Connection to %s:%s failed with code %s (%s)",
+                          self.host, self.port, rc, detail)
 
     def _on_disconnect(self, client, userdata, rc):
         """Handle disconnection callback."""
@@ -522,6 +544,15 @@ class HisenseTV:
         """Handle incoming messages."""
         try:
             payload = json.loads(msg.payload.decode())
+
+            # The TV occasionally publishes bare JSON scalars (e.g. a string)
+            # instead of an object. Record it and unblock any waiter, but never
+            # pass it to the dict-expecting handlers below (they call .get()).
+            if not isinstance(payload, dict):
+                _LOGGER.debug("Non-dict payload on %s: %r", msg.topic, payload)
+                self._last_response = payload
+                self._response_event.set()
+                return
 
             # Handle token issuance response
             if "tokenissuance" in msg.topic:
@@ -574,6 +605,8 @@ class HisenseTV:
         Args:
             payload: Authentication response payload
         """
+        if not isinstance(payload, dict):
+            return
         # Check for PIN accepted (result: 1 from authenticationcode)
         if payload.get("result") == 1:
             # PIN was accepted, mark as authenticated
@@ -594,6 +627,8 @@ class HisenseTV:
         Args:
             payload: Token response payload with accesstoken/refreshtoken
         """
+        if not isinstance(payload, dict):
+            return
         access_token = payload.get("accesstoken")
         refresh_token = payload.get("refreshtoken")
 
@@ -606,6 +641,10 @@ class HisenseTV:
             # Important: mqtt_username and client_id are needed for reconnection
             if self._storage:
                 self._storage.save_token(
+                    # Key by host:port to match the legacy format the CLI
+                    # lookups fall back to (storage matches by key, not by the
+                    # host field inside entries).
+                    device_id=f"{self.host}:{self.port}",
                     host=self.host,
                     port=self.port,
                     access_token=access_token,
@@ -621,6 +660,7 @@ class HisenseTV:
 
             _LOGGER.info("Token received and saved!")
             self._auth_event.set()
+            self._token_event.set()
 
     def _publish(self, topic: str, payload: Any = "") -> bool:
         """Publish a message to the TV.
@@ -676,6 +716,7 @@ class HisenseTV:
             True if authentication successful (or sent if not waiting)
         """
         self._auth_event.clear()
+        self._token_event.clear()
         topic = get_topic(TOPIC_AUTH, self.client_id)
 
         # PIN must be sent as integer, not string!
@@ -689,16 +730,24 @@ class HisenseTV:
         if not self._publish(topic, {"authNum": pin_int}):
             return False
 
-        if wait_for_response:
-            # Wait for authentication response
-            if self._auth_event.wait(timeout):
-                # After PIN accepted, request token
-                if self._authenticated:
-                    self._request_token()
-                return self._authenticated
-            return False
+        if not wait_for_response:
+            return True
 
-        return True
+        # Wait for PIN acceptance
+        if not self._auth_event.wait(timeout):
+            return False
+        if not self._authenticated:
+            return self._authenticated
+
+        # PIN accepted - request the token and wait for it to actually arrive
+        # and be persisted before reporting success (the token issuance is a
+        # separate message; returning early raced with disconnect() and lost it).
+        self._request_token()
+        if self._access_token or self._token_event.wait(timeout):
+            return self._access_token is not None
+
+        _LOGGER.warning("PIN accepted but no access token received within %ss", timeout)
+        return False
 
     def _request_token(self, refresh_token: str = ""):
         """Request access token (new or refreshed).
@@ -788,7 +837,7 @@ class HisenseTV:
             Token info dict or None if no token saved
         """
         if self._storage:
-            return self._storage.get_token(self.host, self.port)
+            return self._storage.get_token(host=self.host, port=self.port)
         return None
 
     # State checking
