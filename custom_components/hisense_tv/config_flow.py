@@ -11,8 +11,6 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant import config_entries
-from async_upnp_client.const import ATTR_UPNP_FRIENDLY_NAME
-
 from homeassistant.components import ssdp
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT
 from homeassistant.core import HomeAssistant, callback
@@ -311,7 +309,7 @@ class HisenseTVConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return self.async_abort(reason="no_host")
 
         self._discovery_info = discovery_info
-        self._name = discovery_info.upnp.get(ATTR_UPNP_FRIENDLY_NAME, DEFAULT_NAME)
+        self._name = discovery_info.upnp.get("friendlyName", DEFAULT_NAME)
 
         # Try to get unique ID from USN
         usn = discovery_info.ssdp_usn
@@ -535,15 +533,11 @@ class HisenseTVConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         config_entry: config_entries.ConfigEntry,
     ) -> config_entries.OptionsFlow:
         """Create the options flow."""
-        return HisenseTVOptionsFlow(config_entry)
+        return HisenseTVOptionsFlow()
 
 
 class HisenseTVOptionsFlow(config_entries.OptionsFlow):
     """Handle options flow for Hisense TV."""
-
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        """Initialize options flow."""
-        self.config_entry = config_entry
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
