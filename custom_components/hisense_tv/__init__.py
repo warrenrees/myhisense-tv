@@ -13,6 +13,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.device_registry import DeviceEntry
 from homeassistant.helpers.typing import ConfigType
 
 from .const import (
@@ -192,6 +193,19 @@ async def async_unload_entry(hass: HomeAssistant, entry: HisenseTVConfigEntry) -
             await runtime_data.tv.async_disconnect()
 
     return unload_ok
+
+
+async def async_remove_config_entry_device(
+    hass: HomeAssistant,
+    config_entry: HisenseTVConfigEntry,
+    device_entry: DeviceEntry,
+) -> bool:
+    """Allow a device to be removed from the UI.
+
+    Returning True lets HA delete the device from the device page. Each TV is its
+    own config entry, so manual removal of a stale device is always permitted.
+    """
+    return True
 
 
 async def async_update_options(hass: HomeAssistant, entry: HisenseTVConfigEntry) -> None:
