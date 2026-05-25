@@ -1,0 +1,2 @@
+# Keep the test suite out of the source distribution.
+prune tests

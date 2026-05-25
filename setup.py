@@ -20,7 +20,7 @@ setup(
         "Source Code": "https://github.com/warrenrees/pyvidaa",
         "Changelog": "https://github.com/warrenrees/pyvidaa/blob/main/CHANGELOG.md",
     },
-    packages=find_packages(),
+    packages=find_packages(exclude=["tests", "tests.*"]),
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
