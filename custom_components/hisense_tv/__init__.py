@@ -8,7 +8,7 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError, ServiceValidationError
@@ -125,7 +125,7 @@ async def _async_setup_services(hass: HomeAssistant) -> None:
             )
 
         for entry in entries:
-            if entry.state.recoverable:
+            if entry.state is not ConfigEntryState.LOADED:
                 continue
             runtime_data: HisenseTVRuntimeData = entry.runtime_data
             try:
@@ -149,7 +149,7 @@ async def _async_setup_services(hass: HomeAssistant) -> None:
             )
 
         for entry in entries:
-            if entry.state.recoverable:
+            if entry.state is not ConfigEntryState.LOADED:
                 continue
             runtime_data: HisenseTVRuntimeData = entry.runtime_data
             try:

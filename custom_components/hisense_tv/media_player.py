@@ -67,7 +67,7 @@ class HisenseTVMediaPlayer(CoordinatorEntity[HisenseTVDataUpdateCoordinator], Me
     def __init__(
         self,
         coordinator: HisenseTVDataUpdateCoordinator,
-        entry: ConfigEntry,
+        entry: HisenseTVConfigEntry,
     ) -> None:
         """Initialize the media player."""
         super().__init__(coordinator)

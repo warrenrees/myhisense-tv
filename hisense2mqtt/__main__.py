@@ -3,6 +3,7 @@
 
 import argparse
 import logging
+import os
 import sys
 
 from . import __version__
@@ -54,7 +55,8 @@ def main():
     )
     parser.add_argument(
         "-c", "--config",
-        help="Path to config file (default: config.yaml)",
+        default=os.environ.get("CONFIG_PATH"),
+        help="Path to config file (default: $CONFIG_PATH or config.yaml)",
     )
     parser.add_argument(
         "-v", "--version",

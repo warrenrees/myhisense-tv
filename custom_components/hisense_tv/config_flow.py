@@ -571,7 +571,11 @@ class HisenseTVOptionsFlow(config_entries.OptionsFlow):
             return self.async_create_entry(title="", data=user_input)
 
         current_interval = self.config_entry.options.get("scan_interval", SCAN_INTERVAL)
-        current_mac = self.config_entry.data.get(CONF_MAC, "")
+        # WoL target: previously-set option, else the TV's real hardware MAC
+        # (device_id). Not CONF_MAC, which is the random dynamic-auth MAC.
+        current_wol_mac = self.config_entry.options.get(
+            "wol_mac", self.config_entry.data.get(CONF_DEVICE_ID, "")
+        )
 
         return self.async_show_form(
             step_id="init",
@@ -591,7 +595,7 @@ class HisenseTVOptionsFlow(config_entries.OptionsFlow):
                     ),
                     vol.Optional(
                         "wol_mac",
-                        default=current_mac,
+                        default=current_wol_mac,
                     ): TextSelector(
                         TextSelectorConfig(type=TextSelectorType.TEXT)
                     ),

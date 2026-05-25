@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ipaddress
 import logging
 from datetime import timedelta
 from typing import Any
@@ -17,6 +18,20 @@ from hisense_tv.wol import wake_tv
 from .const import DOMAIN, SCAN_INTERVAL, STATE_FAKE_SLEEP, CONF_DEVICE_ID, CONF_HOST
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _ipv4_broadcast_subnet(host: str) -> str | None:
+    """Return the /24 subnet prefix (e.g. "10.0.0") for an IPv4 host.
+
+    Returns None for hostnames or IPv6 addresses; wake_tv then falls back to
+    the global broadcast address.
+    """
+    try:
+        if isinstance(ipaddress.ip_address(host), ipaddress.IPv4Address):
+            return host.rsplit(".", 1)[0]
+    except ValueError:
+        pass
+    return None
 
 
 class HisenseTVDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
@@ -282,17 +297,24 @@ class HisenseTVDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def async_turn_on(self) -> None:
         """Turn TV on using WoL and power command."""
-        # Get MAC from device_id
-        device_id = self.entry.data.get(CONF_DEVICE_ID)
-        if device_id and len(device_id) == 12:
-            # Format as MAC address
-            mac = ":".join(device_id[i:i+2] for i in range(0, 12, 2))
-            # Get subnet from host IP
+        # Resolve the WoL target MAC: explicit wol_mac option wins, else the
+        # TV's hardware MAC stored as device_id. Normalize to bare hex so a
+        # colon/dash-formatted value still works.
+        raw_mac = self.entry.options.get("wol_mac") or self.entry.data.get(CONF_DEVICE_ID)
+        normalized = (raw_mac or "").replace(":", "").replace("-", "").lower()
+        if len(normalized) == 12 and all(c in "0123456789abcdef" for c in normalized):
+            mac = ":".join(normalized[i:i+2] for i in range(0, 12, 2))
+            # Derive a /24 broadcast subnet only for a real IPv4 host.
             host = self.entry.data.get(CONF_HOST, "")
-            subnet = host.rsplit(".", 1)[0] if "." in host else None
-            # Send WoL in executor (blocking call)
+            subnet = _ipv4_broadcast_subnet(host)
             _LOGGER.debug("Sending WoL to %s", mac)
             await self.hass.async_add_executor_job(wake_tv, mac, subnet)
+        else:
+            _LOGGER.warning(
+                "Skipping Wake-on-LAN: no valid MAC (got %r). Set a 'wol_mac' in the "
+                "integration options to enable wake-on-LAN.",
+                raw_mac,
+            )
 
         # Also send power on command
         await self.tv.async_power_on()

@@ -1,5 +1,6 @@
 """Main bridge class for hisense2mqtt."""
 
+import ipaddress
 import json
 import logging
 import signal
@@ -20,6 +21,21 @@ from .config import expand_tv_configs, get_device_id, load_config, validate_conf
 from .discovery import generate_all_discoveries, remove_all_discoveries
 
 logger = logging.getLogger(__name__)
+
+
+def _ipv4_broadcast_subnet(host: str) -> Optional[str]:
+    """Return the /24 subnet prefix (e.g. "10.0.0") for an IPv4 host.
+
+    Returns None for hostnames or IPv6 addresses, where deriving a subnet by
+    splitting on "." would produce a meaningless value. wake_tv falls back to
+    the global broadcast address when subnet is None.
+    """
+    try:
+        if isinstance(ipaddress.ip_address(host), ipaddress.IPv4Address):
+            return host.rsplit(".", 1)[0]
+    except ValueError:
+        pass
+    return None
 
 
 class HisenseMQTTBridge:
@@ -54,7 +70,6 @@ class HisenseMQTTBridge:
         # Threading
         self._poll_thread: Optional[threading.Thread] = None
         self._reconnect_thread: Optional[threading.Thread] = None
-        self._lock = threading.Lock()
 
     def _setup_broker_client(self):
         """Set up MQTT broker client."""
@@ -207,15 +222,12 @@ class HisenseMQTTBridge:
             if mac and self.config.get("options", {}).get("wake_on_lan", True):
                 logger.info(f"Sending Wake-on-LAN to {mac}")
                 tv_host = self.config.get("tv", {}).get("host", "")
-                subnet = ".".join(tv_host.split(".")[:3]) if "." in tv_host else None
+                subnet = _ipv4_broadcast_subnet(tv_host)
                 wake_tv(mac, subnet)
                 time.sleep(3)
 
-            # Connect to TV
-            if not self._tv.is_connected:
-                self._connect_tv()
-
-            if self._tv.is_connected:
+            # Connect to TV (guards against self._tv being None during startup)
+            if self._ensure_tv_connected():
                 # Send power on (some TVs need this after WoL)
                 self._tv.power()
                 self._power_state = "ON"

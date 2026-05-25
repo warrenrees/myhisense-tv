@@ -170,6 +170,18 @@ class AsyncHisenseTV:
             func = partial(func, **kwargs)
         return await loop.run_in_executor(self._executor, func, *args)
 
+    async def _call(self, method_name: str, *args, **kwargs) -> Any:
+        """Call a sync client method in the executor, building the client if needed.
+
+        Resolving the client inside the executor (rather than reading
+        self._client on the event loop) avoids an AttributeError when a command
+        is issued before async_connect() or after async_reset() dropped it.
+        """
+        def _run():
+            return getattr(self._ensure_client(), method_name)(*args, **kwargs)
+
+        return await self._run_in_executor(_run)
+
     # Properties (sync access is safe)
     @property
     def host(self) -> str:
@@ -349,81 +361,79 @@ class AsyncHisenseTV:
         Returns:
             True if sent successfully
         """
-        return await self._run_in_executor(
-            self._client.send_key, key, check_state=check_state
-        )
+        return await self._call("send_key", key, check_state=check_state)
 
     async def async_power(self) -> bool:
         """Toggle power."""
-        return await self._run_in_executor(self._client.power)
+        return await self._call("power")
 
     async def async_power_on(self) -> bool:
         """Turn TV on (only if off)."""
-        return await self._run_in_executor(self._client.power_on)
+        return await self._call("power_on")
 
     async def async_power_off(self) -> bool:
         """Turn TV off (only if on)."""
-        return await self._run_in_executor(self._client.power_off)
+        return await self._call("power_off")
 
     async def async_volume_up(self) -> bool:
         """Increase volume."""
-        return await self._run_in_executor(self._client.volume_up)
+        return await self._call("volume_up")
 
     async def async_volume_down(self) -> bool:
         """Decrease volume."""
-        return await self._run_in_executor(self._client.volume_down)
+        return await self._call("volume_down")
 
     async def async_mute(self) -> bool:
         """Toggle mute."""
-        return await self._run_in_executor(self._client.mute)
+        return await self._call("mute")
 
     async def async_up(self) -> bool:
         """Navigate up."""
-        return await self._run_in_executor(self._client.up)
+        return await self._call("up")
 
     async def async_down(self) -> bool:
         """Navigate down."""
-        return await self._run_in_executor(self._client.down)
+        return await self._call("down")
 
     async def async_left(self) -> bool:
         """Navigate left."""
-        return await self._run_in_executor(self._client.left)
+        return await self._call("left")
 
     async def async_right(self) -> bool:
         """Navigate right."""
-        return await self._run_in_executor(self._client.right)
+        return await self._call("right")
 
     async def async_ok(self) -> bool:
         """Press OK/Enter."""
-        return await self._run_in_executor(self._client.ok)
+        return await self._call("ok")
 
     async def async_back(self) -> bool:
         """Go back."""
-        return await self._run_in_executor(self._client.back)
+        return await self._call("back")
 
     async def async_menu(self) -> bool:
         """Open menu."""
-        return await self._run_in_executor(self._client.menu)
+        return await self._call("menu")
 
     async def async_home(self) -> bool:
         """Go to home screen."""
-        return await self._run_in_executor(self._client.home)
+        return await self._call("home")
 
     async def async_exit(self) -> bool:
         """Exit current screen."""
-        return await self._run_in_executor(self._client.exit)
+        return await self._call("exit")
 
     async def async_play(self) -> bool:
         """Play."""
-        return await self._run_in_executor(self._client.play)
+        return await self._call("play")
 
     async def async_pause(self) -> bool:
         """Pause."""
-        return await self._run_in_executor(self._client.pause)
+        return await self._call("pause")
 
     async def async_stop(self) -> bool:
         """Stop."""
-        return await self._run_in_executor(self._client.stop)
+        return await self._call("stop")
 
     # Volume control
     async def async_get_volume(self, timeout: float = 5.0) -> Optional[int]:
@@ -432,9 +442,7 @@ class AsyncHisenseTV:
         Returns:
             Volume (0-100) or None if failed
         """
-        return await self._run_in_executor(
-            self._client.get_volume, timeout=timeout
-        )
+        return await self._call("get_volume", timeout=timeout)
 
     async def async_set_volume(
         self, level: int, check_state: bool = False
@@ -448,9 +456,7 @@ class AsyncHisenseTV:
         Returns:
             True if sent successfully
         """
-        return await self._run_in_executor(
-            self._client.set_volume, level, check_state=check_state
-        )
+        return await self._call("set_volume", level, check_state=check_state)
 
     # Source control
     async def async_get_sources(self, timeout: float = 5.0) -> Optional[List[dict]]:
@@ -459,9 +465,7 @@ class AsyncHisenseTV:
         Returns:
             List of source dicts or None
         """
-        return await self._run_in_executor(
-            self._client.get_sources, timeout=timeout
-        )
+        return await self._call("get_sources", timeout=timeout)
 
     async def async_set_source(
         self, source: str, check_state: bool = False
@@ -475,9 +479,7 @@ class AsyncHisenseTV:
         Returns:
             True if sent successfully
         """
-        return await self._run_in_executor(
-            self._client.set_source, source, check_state=check_state
-        )
+        return await self._call("set_source", source, check_state=check_state)
 
     # State
     async def async_get_state(self, timeout: float = 5.0) -> Optional[dict]:
@@ -486,9 +488,7 @@ class AsyncHisenseTV:
         Returns:
             State dict or None
         """
-        return await self._run_in_executor(
-            self._client.get_state, timeout=timeout
-        )
+        return await self._call("get_state", timeout=timeout)
 
     async def async_is_on(self) -> bool:
         """Check if TV is powered on.
@@ -496,7 +496,7 @@ class AsyncHisenseTV:
         Returns:
             True if TV is on
         """
-        return await self._run_in_executor(self._client.is_on)
+        return await self._call("is_on")
 
     # Device info
     async def async_get_tv_info(self, timeout: float = 5.0) -> Optional[dict]:
@@ -505,9 +505,7 @@ class AsyncHisenseTV:
         Returns:
             TV info dict or None
         """
-        return await self._run_in_executor(
-            self._client.get_tv_info, timeout=timeout
-        )
+        return await self._call("get_tv_info", timeout=timeout)
 
     async def async_get_device_info(self, timeout: float = 5.0) -> Optional[dict]:
         """Get device info (model, name, version, etc).
@@ -515,9 +513,7 @@ class AsyncHisenseTV:
         Returns:
             Device info dict or None
         """
-        return await self._run_in_executor(
-            self._client.get_device_info, timeout=timeout
-        )
+        return await self._call("get_device_info", timeout=timeout)
 
     async def async_get_capability(self, timeout: float = 5.0) -> Optional[dict]:
         """Get TV capabilities.
@@ -525,9 +521,7 @@ class AsyncHisenseTV:
         Returns:
             Capability dict or None
         """
-        return await self._run_in_executor(
-            self._client.get_capability, timeout=timeout
-        )
+        return await self._call("get_capability", timeout=timeout)
 
     # Apps
     async def async_get_apps(self, timeout: float = 5.0) -> Optional[List[dict]]:
@@ -536,9 +530,7 @@ class AsyncHisenseTV:
         Returns:
             List of app dicts or None
         """
-        return await self._run_in_executor(
-            self._client.get_apps, timeout=timeout
-        )
+        return await self._call("get_apps", timeout=timeout)
 
     async def async_launch_app(
         self, app_name: str, check_state: bool = False
@@ -552,9 +544,7 @@ class AsyncHisenseTV:
         Returns:
             True if sent successfully
         """
-        return await self._run_in_executor(
-            self._client.launch_app, app_name, check_state=check_state
-        )
+        return await self._call("launch_app", app_name, check_state=check_state)
 
     # Async context manager
     async def __aenter__(self) -> "AsyncHisenseTV":

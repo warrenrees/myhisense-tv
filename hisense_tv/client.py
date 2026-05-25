@@ -482,7 +482,7 @@ class HisenseTV:
                 try:
                     self._client.loop_stop()
                     self._client.disconnect()
-                except:
+                except Exception:
                     pass
 
         _LOGGER.error("All authentication methods failed")

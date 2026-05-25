@@ -22,7 +22,7 @@ from .const import (
 from .coordinator import HisenseTVDataUpdateCoordinator
 
 # Import key utilities from the library
-from hisense_tv.keys import get_key, ALL_KEYS
+from hisense_tv.keys import get_key
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
