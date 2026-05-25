@@ -341,6 +341,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - Protocol reverse-engineered from the Vidaa mobile app
 - Inspired by various Hisense TV integration projects
+- Brand images derived from the [VIDAA logo](https://commons.wikimedia.org/wiki/File:VIDAA_LOGO.jpg) © VIDAA USA, used under [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/), via Wikimedia Commons
 
 ## Support
 
