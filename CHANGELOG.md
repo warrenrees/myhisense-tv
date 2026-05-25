@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-05-25
+
+### Added
+
+- **Multi-TV support in the hisense2mqtt bridge** — the bridge now runs one
+  worker per TV defined in the `tvs:` config (each its own Home Assistant
+  device), in addition to the legacy singular `tv:` section. Bridge versioned
+  separately at 1.1.0.
+- **Automatic access-token renewal** in both the bridge and the Home Assistant
+  integration: proactive refresh before expiry while connected, and a client
+  rebuild on reconnect so an expired access token is refreshed from the
+  refresh token instead of being replayed.
+- Core-library unit test suite (credentials, protocol detection, message
+  handling, pairing/token persistence) where there was previously none.
+
+### Fixed
+
+- Pairing on the `--ip` path no longer drops the TV MAC (which degraded
+  dynamic auth to empty static credentials and was rejected as MQTT code 5).
+- `tv config add` now persists the discovered MAC/name/protocol and reports
+  the default TV; commands echo their target IP.
+- MQTT code 5 errors now hint at clock/timezone/DST skew (time-based
+  credentials are rejected when the TV's clock is wrong).
+- Non-dict MQTT payloads no longer crash the client's message loop.
+- Pairing waits for the access token to be received and persisted instead of
+  returning on PIN-accept and racing disconnect.
+- `save_token()` is called with the required device id; saved tokens are
+  looked up by keyword host/port (previously positional, so they were never
+  found and reconnects silently re-authenticated).
+- `detect_protocol()` retries on transient network errors.
+- Home Assistant `config_flow` compatibility (friendlyName lookup, dropped
+  deprecated `OptionsFlow.__init__`).
+
 ## [1.3.0] - 2024-12-30
 
 ### Added
