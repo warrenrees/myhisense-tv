@@ -9,6 +9,8 @@ Analysis of the Hisense Vidaa remote app (APK) to understand TV communication pr
 | MQTT Port | `36669` |
 | Protocol | MQTT v3.1.1 over TLS |
 | P12 Password | `186e990688070325a1c4b0ce275d2388` |
+| Client keystore | `res/3R.p12` (cert `CN=VidaaAppAndroidV01` + key) |
+| Truststore | `res/dM.bks` (root `CN=RemoteCA`, alias `mykey`) |
 
 ## Connection Details
 
@@ -44,15 +46,53 @@ openssl pkcs12 -in client_mobile_android.p12 -out client_key.pem -nocerts -nodes
     -passin pass:186e990688070325a1c4b0ce275d2388
 ```
 
+> **Note on keystore file names:** newer APK builds ship the keystores under
+> obfuscated resource names, e.g. `res/3R.p12` (client keystore) and
+> `res/dM.bks` (truststore), rather than `assets/client_mobile_android.p12`.
+> The client cert/key and the P12 password are unchanged across these builds.
+
+### Server Certificate Validation (Truststore)
+
+The app validates the **TV's** server certificate against a bundled BouncyCastle
+truststore (`res/dM.bks`, alias `mykey`). It contains a single self-signed root,
+`RemoteCA`, which is also the issuer of the client certificate above — so both
+sides of the mTLS handshake are anchored to the same private CA.
+
+```
+Subject = Issuer: C=CN, ST=shandong, L=qingdao, O=hh, OU=multimedia, CN=RemoteCA
+Validity: Apr 19, 2018 - Apr 13, 2043   (CA:TRUE, self-signed)
+Serial:   B925FCE67D5D45C3
+```
+
+The `RemoteCA` PEM is bundled at `certs/remote_ca.pem`. The client cert verifies
+against it directly:
+```bash
+openssl verify -CAfile certs/remote_ca.pem certs/vidaa_client.pem   # => OK
+```
+
+The `.bks` is a BKS v1 store (SHA-1 HMAC, 1904 iterations). Its entries — including
+the embedded X.509 cert — are stored in cleartext, so the truststore can be parsed
+without the JVM/BouncyCastle by locating the `00 05 "X.509"` length-prefixed blocks.
+
 ### Credentials (from `libmqttcrypt.so`)
 
-**Static Credentials (older TVs):**
-| Purpose | Value (Base64) | Decoded |
-|---------|----------------|---------|
-| Username | `aGlzZW5zZXNlcnZpY2U=` | `hisenseservice` |
-| Password | `bXVsdGltcXR0c2VydmljZQ==` | `multimqttservice` |
-| Alt Password | `bXVsdGlzY3JlZW4xMjM=` | `multiscreen123` |
-| Salt/Key | `YXlkNmFmYmoyaHVmMw==` | `ayd6afbj2huf3` |
+The native lib exposes these via JNI getters under
+`com.universal.remote.multicomm.sdk.ConnectUtils`. The username/password are the
+static MQTT login; the others are **TLS keystore passphrases**, not MQTT creds:
+
+| JNI getter | Value | Role |
+|------------|-------|------|
+| `getUserName` | `hisenseservice` (b64 `aGlzZW5zZXNlcnZpY2U=`) | static MQTT username |
+| `getUserPass` | `multimqttservice` (b64 `bXVsdGltcXR0c2VydmljZQ==`) | static MQTT password |
+| `getClientKeyPass` | `multiscreen123` (b64 `bXVsdGlzY3JlZW4xMjM=`) | legacy client key passphrase |
+| `getNewClientKeyPass` | `ayd6afbj2huf3` (b64 `YXlkNmFmYmoyaHVmMw==`) | client key passphrase |
+| `getNewClientP12Password` | `186e990688070325a1c4b0ce275d2388` | **P12 store password** for the client keystore (`3R.p12`) |
+| `getNewClientKeyPassword` | (runtime) | private-key bag passphrase inside the keystore |
+
+> The last two getters return an obfuscated 32-byte seed from `.rodata` that the
+> (Baidu-packed) Java layer transforms into the final string at runtime; the
+> `186e99…` value is the empirically-confirmed password (it decrypts `3R.p12`),
+> captured via logcat rather than reconstructed from the seed statically.
 
 **Dynamic Credentials (newer VIDAA TVs - REQUIRED):**
 
