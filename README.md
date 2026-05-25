@@ -7,7 +7,7 @@ Python library (`pyvidaa`) and Docker MQTT bridge (`hisense2mqtt`) for controlli
 Hisense/Vidaa Smart TVs over MQTT.
 
 > **Home Assistant users:** the native HA custom component now lives in its own repository,
-> [**ha_vidaa_tv**](https://github.com/warrenrees/ha_vidaa_tv) (installable via HACS). This
+> [**ha_vidaatv**](https://github.com/warrenrees/ha_vidaatv) (installable via HACS). This
 > repository is the underlying library and the standalone MQTT bridge.
 
 > **Disclaimer:** pyvidaa is an independent, community-maintained project and is not affiliated with, endorsed by, or sponsored by Hisense or VIDAA. "VIDAA" and "Hisense" are trademarks of their respective owners; their use here is purely descriptive.
@@ -272,7 +272,7 @@ See [docs/API.md](docs/API.md) for full API reference.
 
 - [API Reference](docs/API.md)
 - [Configuration Reference](docs/CONFIGURATION.md)
-- [Home Assistant Integration](https://github.com/warrenrees/ha_vidaa_tv) (separate repository)
+- [Home Assistant Integration](https://github.com/warrenrees/ha_vidaatv) (separate repository)
 - [MQTT Topics](docs/MQTT_TOPICS.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
 - [Protocol Analysis](VIDAA_PROTOCOL_ANALYSIS.md)
