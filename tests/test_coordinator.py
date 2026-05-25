@@ -106,9 +106,84 @@ async def test_coordinator_reconnect(
         await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
 
-    # Should have called disconnect then connect
-    mock_hisense_tv.async_disconnect.assert_called()
+    # Should have rebuilt the client (reset) then reconnected
+    mock_hisense_tv.async_reset.assert_called()
     mock_hisense_tv.async_connect.assert_called()
+
+
+async def test_coordinator_refreshes_token_near_expiry(
+    hass: HomeAssistant,
+    mock_hisense_tv: MagicMock,
+) -> None:
+    """An access token within a day of expiry is refreshed during update."""
+    mock_hisense_tv.async_token_status = AsyncMock(
+        return_value={
+            "has_token": True,
+            "access_valid": True,
+            "access_expires_in": 3600,  # < 1 day
+            "needs_refresh": False,
+            "needs_reauth": False,
+        }
+    )
+
+    entry = create_mock_config_entry(hass)
+    entry.add_to_hass(hass)
+
+    with patch(
+        "custom_components.hisense_tv.AsyncHisenseTV",
+        return_value=mock_hisense_tv,
+    ):
+        await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+
+    mock_hisense_tv.async_refresh_token.assert_called()
+
+
+async def test_coordinator_no_refresh_when_token_fresh(
+    hass: HomeAssistant,
+    mock_hisense_tv: MagicMock,
+) -> None:
+    """A token with plenty of life left is not refreshed."""
+    # Fixture default: access_expires_in = 7 days
+    entry = create_mock_config_entry(hass)
+    entry.add_to_hass(hass)
+
+    with patch(
+        "custom_components.hisense_tv.AsyncHisenseTV",
+        return_value=mock_hisense_tv,
+    ):
+        await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+
+    mock_hisense_tv.async_refresh_token.assert_not_called()
+
+
+async def test_coordinator_no_refresh_when_needs_reauth(
+    hass: HomeAssistant,
+    mock_hisense_tv: MagicMock,
+) -> None:
+    """When both tokens are expired, don't attempt a doomed refresh."""
+    mock_hisense_tv.async_token_status = AsyncMock(
+        return_value={
+            "has_token": True,
+            "access_valid": False,
+            "access_expires_in": 0,
+            "needs_refresh": False,
+            "needs_reauth": True,
+        }
+    )
+
+    entry = create_mock_config_entry(hass)
+    entry.add_to_hass(hass)
+
+    with patch(
+        "custom_components.hisense_tv.AsyncHisenseTV",
+        return_value=mock_hisense_tv,
+    ):
+        await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+
+    mock_hisense_tv.async_refresh_token.assert_not_called()
 
 
 async def test_coordinator_turn_on_with_wol(

@@ -139,6 +139,35 @@ class HisenseTVDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         except Exception as err:
             _LOGGER.warning("Error fetching device info: %s", err)
 
+    # Refresh the access token when it has less than this until expiry.
+    _TOKEN_REFRESH_THRESHOLD = 24 * 60 * 60  # 1 day
+
+    async def _async_maybe_refresh_token(self) -> None:
+        """Proactively refresh the access token while connected.
+
+        The access token lasts ~7 days; refreshing before it expires keeps a
+        continuously-loaded integration authenticated without an HA restart or
+        reload. A successful refresh persists a new token, so the expiry check
+        stops firing afterwards.
+        """
+        try:
+            status = await self.tv.async_token_status()
+            if not status.get("has_token") or status.get("needs_reauth"):
+                return
+            near_expiry = (
+                status.get("access_valid")
+                and status.get("access_expires_in", 0) < self._TOKEN_REFRESH_THRESHOLD
+            )
+            if status.get("needs_refresh") or near_expiry:
+                _LOGGER.debug(
+                    "Access token near expiry (%ss left), refreshing",
+                    status.get("access_expires_in", 0),
+                )
+                if not await self.tv.async_refresh_token():
+                    _LOGGER.debug("Proactive token refresh failed")
+        except Exception as err:
+            _LOGGER.debug("Token refresh check failed: %s", err)
+
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from TV."""
         import time
@@ -147,10 +176,12 @@ class HisenseTVDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         try:
             # Check connection
             if not self.tv.is_connected:
-                _LOGGER.debug("TV disconnected, attempting reconnect")
-                # Disconnect first to ensure clean state
+                _LOGGER.debug("TV disconnected, rebuilding client and reconnecting")
+                # Rebuild the client so saved-token status is re-evaluated; an
+                # expired access token is then refreshed from the refresh token
+                # rather than being replayed and rejected.
                 try:
-                    await self.tv.async_disconnect()
+                    await self.tv.async_reset()
                 except Exception:
                     pass
                 # Try to connect with longer timeout for wake-up scenarios
@@ -161,6 +192,9 @@ class HisenseTVDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 _LOGGER.debug("Reconnect took %.2fs", time.monotonic() - start)
 
             self._available = True
+
+            # Renew the access token before it lapses while connected.
+            await self._async_maybe_refresh_token()
 
             # Update device info on first successful connection
             await self._async_update_device_info()

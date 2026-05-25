@@ -96,7 +96,20 @@ def mock_hisense_tv() -> Generator[MagicMock, None, None]:
     # Connection methods
     mock_instance.async_connect = AsyncMock(return_value=True)
     mock_instance.async_disconnect = AsyncMock()
+    mock_instance.async_reset = AsyncMock()
     mock_instance.is_connected = True
+
+    # Token lifecycle
+    mock_instance.async_token_status = AsyncMock(
+        return_value={
+            "has_token": True,
+            "access_valid": True,
+            "access_expires_in": 7 * 24 * 3600,
+            "needs_refresh": False,
+            "needs_reauth": False,
+        }
+    )
+    mock_instance.async_refresh_token = AsyncMock(return_value=True)
 
     # Device info methods
     mock_instance.async_get_device_info = AsyncMock(return_value=MOCK_DEVICE_INFO)

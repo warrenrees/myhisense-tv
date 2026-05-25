@@ -292,6 +292,39 @@ class AsyncHisenseTV:
             timeout=timeout,
         )
 
+    async def async_reset(self) -> None:
+        """Drop the underlying client so the next connect rebuilds it.
+
+        Rebuilding re-reads saved-token status from storage, so an expired
+        access token is refreshed from the still-valid refresh token instead
+        of being replayed on reconnect.
+        """
+        def _reset():
+            if self._client is not None:
+                try:
+                    self._client.disconnect()
+                except Exception:
+                    pass
+                self._client = None
+
+        await self._run_in_executor(_reset)
+
+    async def async_token_status(self) -> dict:
+        """Return saved-token status for this TV, read from storage.
+
+        Keys include has_token, access_valid, access_expires_in, needs_refresh
+        and needs_reauth.
+        """
+        def _status():
+            from .config import get_storage
+
+            return get_storage().get_token_status(
+                host=self._init_kwargs["host"],
+                port=self._init_kwargs["port"],
+            )
+
+        return await self._run_in_executor(_status)
+
     def needs_authentication(self) -> bool:
         """Check if TV is requesting authentication."""
         return self._client.needs_authentication() if self._client else False
