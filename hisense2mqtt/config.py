@@ -54,7 +54,7 @@ def _resolve_uuid(entry: dict, host: Optional[str], port: int) -> Optional[str]:
     if uuid or not host:
         return uuid
     try:
-        from hisense_tv.config import get_storage
+        from pyvidaa.config import get_storage
 
         token = get_storage().get_token(host=host, port=port)
         if token:

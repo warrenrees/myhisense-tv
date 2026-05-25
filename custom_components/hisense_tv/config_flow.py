@@ -58,8 +58,8 @@ lib_path = Path(__file__).parent.parent.parent
 if str(lib_path) not in sys.path:
     sys.path.insert(0, str(lib_path))
 
-from hisense_tv import AsyncHisenseTV
-from hisense_tv.discovery import probe_ip
+from pyvidaa import AsyncHisenseTV
+from pyvidaa.discovery import probe_ip
 
 
 def get_default_cert_paths(hass: HomeAssistant) -> tuple[str, str]:

@@ -1,4 +1,4 @@
-"""Unit tests for the core hisense_tv library (no Home Assistant, no network).
+"""Unit tests for the core pyvidaa library (no Home Assistant, no network).
 
 These cover the logic that previously had zero test coverage and that directly
 caused the live pairing failures we debugged:
@@ -13,10 +13,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from hisense_tv.client import HisenseTV
-from hisense_tv.config.storage import TokenStorage
-from hisense_tv.credentials import generate_credentials
-from hisense_tv.protocol import (
+from pyvidaa.client import HisenseTV
+from pyvidaa.config.storage import TokenStorage
+from pyvidaa.credentials import generate_credentials
+from pyvidaa.protocol import (
     AuthMethod,
     detect_protocol,
     get_auth_method,
@@ -138,7 +138,7 @@ def test_detect_protocol_retries_on_transient_error_then_succeeds():
         return _mock_urlopen_returning(XML_DESCRIPTOR)
 
     with patch("urllib.request.urlopen", side_effect=side_effect), \
-            patch("hisense_tv.protocol.time.sleep"):
+            patch("pyvidaa.protocol.time.sleep"):
         assert detect_protocol("10.0.0.1", retries=2, retry_delay=0) == 3290
     assert calls["n"] == 2  # failed once, succeeded on retry
 
@@ -146,7 +146,7 @@ def test_detect_protocol_retries_on_transient_error_then_succeeds():
 def test_detect_protocol_returns_none_after_exhausting_retries():
     err = urllib.error.URLError(OSError(113, "No route to host"))
     with patch("urllib.request.urlopen", side_effect=err), \
-            patch("hisense_tv.protocol.time.sleep"):
+            patch("pyvidaa.protocol.time.sleep"):
         assert detect_protocol("10.0.0.1", retries=2, retry_delay=0) is None
 
 
@@ -163,7 +163,7 @@ def test_detect_protocol_falls_back_to_second_port():
         return _mock_urlopen_returning(XML_DESCRIPTOR)
 
     with patch("urllib.request.urlopen", side_effect=side_effect), \
-            patch("hisense_tv.protocol.time.sleep"):
+            patch("pyvidaa.protocol.time.sleep"):
         assert detect_protocol("10.0.0.1", retries=0) == 3290
     assert "38400" in seen_ports and "18400" in seen_ports
 
@@ -179,7 +179,7 @@ def test_detect_protocol_explicit_port_skips_fallback():
         raise err
 
     with patch("urllib.request.urlopen", side_effect=side_effect), \
-            patch("hisense_tv.protocol.time.sleep"):
+            patch("pyvidaa.protocol.time.sleep"):
         assert detect_protocol("10.0.0.1", port=38400, retries=0) is None
     assert seen_ports == ["38400"]
 

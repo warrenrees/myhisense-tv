@@ -1,10 +1,12 @@
 # Hisense TV Integration for Home Assistant
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
-[![GitHub Release](https://img.shields.io/github/v/release/warrenrees/myhisense-tv)](https://github.com/warrenrees/myhisense-tv/releases)
-[![License](https://img.shields.io/github/license/warrenrees/myhisense-tv)](LICENSE)
+[![GitHub Release](https://img.shields.io/github/v/release/warrenrees/pyvidaa)](https://github.com/warrenrees/pyvidaa/releases)
+[![License](https://img.shields.io/github/license/warrenrees/pyvidaa)](LICENSE)
 
 Control your Hisense/Vidaa Smart TV from Home Assistant. This integration provides full control including power, volume, input sources, apps, and remote key presses.
+
+> **Disclaimer:** This is an independent, community-maintained project and is not affiliated with, endorsed by, or sponsored by Hisense or VIDAA. "VIDAA" and "Hisense" are trademarks of their respective owners; their use here is purely descriptive.
 
 ## Features
 
@@ -30,7 +32,7 @@ This integration supports Hisense and Vidaa Smart TVs that use MQTT for remote c
 1. Open HACS in Home Assistant
 2. Click the three dots menu in the top right corner
 3. Select "Custom repositories"
-4. Add the repository URL: `https://github.com/warrenrees/myhisense-tv`
+4. Add the repository URL: `https://github.com/warrenrees/pyvidaa`
 5. Select "Integration" as the category
 6. Click "Add"
 7. Search for "Hisense TV" in HACS and install it
@@ -38,7 +40,7 @@ This integration supports Hisense and Vidaa Smart TVs that use MQTT for remote c
 
 ### Manual Installation
 
-1. Download the latest release from [GitHub](https://github.com/warrenrees/myhisense-tv/releases)
+1. Download the latest release from [GitHub](https://github.com/warrenrees/pyvidaa/releases)
 2. Extract the `custom_components/hisense_tv` folder
 3. Copy it to your Home Assistant's `custom_components` directory
 4. Restart Home Assistant
@@ -345,5 +347,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Support
 
-- [GitHub Issues](https://github.com/warrenrees/myhisense-tv/issues) - Bug reports and feature requests
-- [GitHub Discussions](https://github.com/warrenrees/myhisense-tv/discussions) - General questions and community support
+- [GitHub Issues](https://github.com/warrenrees/pyvidaa/issues) - Bug reports and feature requests
+- [GitHub Discussions](https://github.com/warrenrees/pyvidaa/discussions) - General questions and community support

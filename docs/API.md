@@ -5,13 +5,13 @@ This document provides a reference for the `hisense_tv` Python library.
 ## Installation
 
 ```bash
-pip install myhisense-tv
+pip install pyvidaa
 ```
 
 ## Quick Start
 
 ```python
-from hisense_tv import HisenseTV, discover_all
+from pyvidaa import HisenseTV, discover_all
 
 # Discover TVs
 devices = discover_all()
@@ -33,7 +33,7 @@ if tv.connect():
 Run multiple discovery methods and merge results.
 
 ```python
-from hisense_tv import discover_all
+from pyvidaa import discover_all
 
 devices = discover_all(timeout=5.0)
 for ip, device in devices.items():
@@ -52,7 +52,7 @@ for ip, device in devices.items():
 Discover devices via SSDP M-SEARCH multicast query.
 
 ```python
-from hisense_tv import discover_ssdp
+from pyvidaa import discover_ssdp
 
 devices = discover_ssdp(timeout=5.0)
 ```
@@ -62,7 +62,7 @@ devices = discover_ssdp(timeout=5.0)
 Listen for SSDP NOTIFY announcements (passive discovery).
 
 ```python
-from hisense_tv import listen_ssdp
+from pyvidaa import listen_ssdp
 
 # Listen for 30 seconds
 devices = listen_ssdp(timeout=30.0)
@@ -73,7 +73,7 @@ devices = listen_ssdp(timeout=30.0)
 Discover TVs via UDP broadcast on port 36671.
 
 ```python
-from hisense_tv import discover_udp
+from pyvidaa import discover_udp
 
 devices = discover_udp(timeout=5.0, retries=3)
 ```
@@ -83,7 +83,7 @@ devices = discover_udp(timeout=5.0, retries=3)
 Send discovery directly to a specific IP.
 
 ```python
-from hisense_tv import probe_ip
+from pyvidaa import probe_ip
 
 device = probe_ip("10.0.0.125")
 if device:
@@ -113,7 +113,7 @@ class DiscoveredTV:
 ### Constructor
 
 ```python
-from hisense_tv import HisenseTV
+from pyvidaa import HisenseTV
 
 tv = HisenseTV(
     host="10.0.0.125",
@@ -279,7 +279,7 @@ tv.set_volume(50)
 Send a remote control key.
 
 ```python
-from hisense_tv import KEY_UP, KEY_OK, KEY_BACK
+from pyvidaa import KEY_UP, KEY_OK, KEY_BACK
 
 tv.send_key(KEY_UP)
 tv.send_key(KEY_OK)
@@ -312,7 +312,7 @@ for source in sources:
 Change input source.
 
 ```python
-from hisense_tv import SOURCE_HDMI1
+from pyvidaa import SOURCE_HDMI1
 
 tv.set_source(SOURCE_HDMI1)
 # or
@@ -383,7 +383,7 @@ print(info)
 Detect transport protocol version from TV's UPnP descriptor.
 
 ```python
-from hisense_tv import detect_protocol, get_auth_method
+from pyvidaa import detect_protocol, get_auth_method
 
 version = detect_protocol("10.0.0.125")
 print(f"Protocol version: {version}")  # e.g., 3290
@@ -397,7 +397,7 @@ print(f"Auth method: {auth.value}")  # modern, middle, or legacy
 Enum for authentication methods.
 
 ```python
-from hisense_tv import AuthMethod
+from pyvidaa import AuthMethod
 
 AuthMethod.LEGACY   # Protocol < 3000
 AuthMethod.MIDDLE   # Protocol 3000-3285
@@ -413,7 +413,7 @@ AuthMethod.MODERN   # Protocol >= 3290
 Load/save configuration from `~/.config/hisense_tv/config.json`.
 
 ```python
-from hisense_tv import load_config, save_config, set_tv_ip
+from pyvidaa import load_config, save_config, set_tv_ip
 
 config = load_config()
 set_tv_ip("10.0.0.125")
@@ -436,7 +436,7 @@ Get/set default UUID for authentication.
 Manages persistent storage of authentication tokens.
 
 ```python
-from hisense_tv import get_storage
+from pyvidaa import get_storage
 
 storage = get_storage()
 

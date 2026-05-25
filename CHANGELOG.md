@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-05-25
+
+### Changed
+
+- **Renamed the library `myhisense-tv` → `pyvidaa`** to reflect that it supports
+  any Vidaa-OS TV (Hisense, Toshiba, etc.), not just Hisense.
+  - **BREAKING (library users):** the import package is now `pyvidaa` — update
+    `from hisense_tv import ...` to `from pyvidaa import ...`. The PyPI package
+    is now `pyvidaa` (`pip install pyvidaa`).
+  - The Home Assistant integration **domain is unchanged (`hisense_tv`)**, so
+    existing config entries, entities, and automations keep working. The
+    integration now requires `pyvidaa==2.0.0`.
+  - CLI: the `tv` command is unchanged; the secondary `myhisense-tv` command is
+    now `pyvidaa`.
+  - CLI config files at `~/.config/hisense_tv/` and `/etc/hisense_tv/` are still
+    read as legacy fallbacks; the new primary locations are `~/.config/pyvidaa/`
+    and `/etc/pyvidaa/`.
+- Marked the package **Production/Stable**.
+
+### Added
+
+- VIDAA brand images (icon/logo) for the Home Assistant integration via the
+  local `brand/` folder (HA 2026.3+).
+
 ## [1.7.0] - 2026-05-25
 
 ### Added

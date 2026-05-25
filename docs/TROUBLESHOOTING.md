@@ -181,7 +181,7 @@ Common issues and solutions for hisense2mqtt.
    Only UUIDs paired via Vidaa app work. Try:
    ```bash
    # Test with CLI tool
-   python3 -m hisense_tv.cli power
+   python3 -m pyvidaa.cli power
    ```
 
 2. **Verify MQTT messages**
@@ -288,7 +288,7 @@ If you're still stuck:
 
 4. **Test TV directly**
    ```bash
-   python3 -m hisense_tv.cli --ip 10.0.0.194 power
+   python3 -m pyvidaa.cli --ip 10.0.0.194 power
    ```
 
 ## FAQ

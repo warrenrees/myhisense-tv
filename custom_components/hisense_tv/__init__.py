@@ -36,9 +36,9 @@ from .coordinator import HisenseTVDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-# Import from PyPI package (myhisense-tv)
-from hisense_tv import AsyncHisenseTV
-from hisense_tv.config import get_storage
+# Import from PyPI package (pyvidaa)
+from pyvidaa import AsyncHisenseTV
+from pyvidaa.config import get_storage
 
 
 @dataclass

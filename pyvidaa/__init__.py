@@ -145,7 +145,7 @@ from .async_client import (
     async_detect_protocol,
 )
 
-__version__ = "1.7.0"
+__version__ = "2.0.0"
 __all__ = [
     "HisenseTV",
     # Power

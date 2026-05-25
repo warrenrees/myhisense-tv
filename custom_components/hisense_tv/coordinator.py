@@ -13,8 +13,8 @@ from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from hisense_tv import APPS
-from hisense_tv.wol import wake_tv
+from pyvidaa import APPS
+from pyvidaa.wol import wake_tv
 from .const import DOMAIN, SCAN_INTERVAL, STATE_FAKE_SLEEP, CONF_DEVICE_ID, CONF_HOST
 
 _LOGGER = logging.getLogger(__name__)

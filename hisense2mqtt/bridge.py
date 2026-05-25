@@ -13,9 +13,9 @@ import paho.mqtt.client as mqtt
 
 # Import from sibling package
 sys.path.insert(0, str(__file__).rsplit("/", 2)[0])
-from hisense_tv.client import HisenseTV
-from hisense_tv.wol import wake_tv
-from hisense_tv.keys import ALL_KEYS
+from pyvidaa.client import HisenseTV
+from pyvidaa.wol import wake_tv
+from pyvidaa.keys import ALL_KEYS
 
 from .config import expand_tv_configs, get_device_id, load_config, validate_config
 from .discovery import generate_all_discoveries, remove_all_discoveries
@@ -136,7 +136,7 @@ class HisenseMQTTBridge:
             return brand
 
         try:
-            from hisense_tv.discovery import probe_ip
+            from pyvidaa.discovery import probe_ip
 
             device = probe_ip(tv_config["host"], timeout=3.0)
             if device and device.brand:
@@ -494,7 +494,7 @@ class HisenseMQTTBridge:
         expiry check naturally stops firing afterwards.
         """
         try:
-            from hisense_tv.config import get_storage
+            from pyvidaa.config import get_storage
 
             tv_config = self.config.get("tv", {})
             host = tv_config.get("host")

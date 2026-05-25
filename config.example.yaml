@@ -1,4 +1,4 @@
-# myhisense-tv Configuration
+# pyvidaa Configuration
 # Copy this file to config.yaml and edit for your setup
 
 # MQTT Broker Connection (Home Assistant / Mosquitto)

@@ -22,7 +22,7 @@ from .const import (
 from .coordinator import HisenseTVDataUpdateCoordinator
 
 # Import key utilities from the library
-from hisense_tv.keys import get_key
+from pyvidaa.keys import get_key
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -153,7 +153,7 @@ class HisenseTVRemote(CoordinatorEntity[HisenseTVDataUpdateCoordinator], RemoteE
     async def async_send_command(self, command: Iterable[str], **kwargs: Any) -> None:
         """Send remote commands.
 
-        Supports all keys from the hisense_tv library including:
+        Supports all keys from the pyvidaa library including:
         - Navigation: up, down, left, right, ok, enter, select
         - Menu: back, return, menu, home, exit
         - Volume: volumeup, volup, vol+, volumedown, voldown, vol-, mute

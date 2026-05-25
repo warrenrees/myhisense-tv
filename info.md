@@ -45,4 +45,4 @@ data:
 
 ## Documentation
 
-See the [full documentation](https://github.com/warrenrees/myhisense-tv/blob/main/custom_components/hisense_tv/README.md) for detailed setup and configuration options.
+See the [full documentation](https://github.com/warrenrees/pyvidaa/blob/main/custom_components/hisense_tv/README.md) for detailed setup and configuration options.

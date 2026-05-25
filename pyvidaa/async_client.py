@@ -33,7 +33,7 @@ def _get_executor() -> ThreadPoolExecutor:
     """Get or create the default thread pool executor."""
     global _DEFAULT_EXECUTOR
     if _DEFAULT_EXECUTOR is None:
-        _DEFAULT_EXECUTOR = ThreadPoolExecutor(max_workers=4, thread_name_prefix="hisense_tv")
+        _DEFAULT_EXECUTOR = ThreadPoolExecutor(max_workers=4, thread_name_prefix="pyvidaa")
     return _DEFAULT_EXECUTOR
 
 

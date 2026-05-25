@@ -26,8 +26,11 @@ _LOGGER = logging.getLogger(__name__)
 CONFIG_SEARCH_PATHS = [
     Path("config.yaml"),                              # Current directory (primary)
     Path("/app/config.yaml"),                         # Docker
-    Path.home() / ".config" / "hisense_tv" / "config.yaml",  # User home
-    Path("/etc/hisense_tv/config.yaml"),             # System-wide
+    Path.home() / ".config" / "pyvidaa" / "config.yaml",     # User home
+    Path("/etc/pyvidaa/config.yaml"),                # System-wide
+    # Legacy locations (pre-rename from myhisense-tv/hisense_tv) kept for compatibility
+    Path.home() / ".config" / "hisense_tv" / "config.yaml",
+    Path("/etc/hisense_tv/config.yaml"),
 ]
 
 # Legacy config paths for migration

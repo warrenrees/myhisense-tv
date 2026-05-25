@@ -1,4 +1,4 @@
-# myhisense-tv
+# pyvidaa
 
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
@@ -8,6 +8,8 @@ Python library and Home Assistant integration for Hisense/Vidaa Smart TV control
 
 1. **Custom Component** (Recommended) - Native Home Assistant integration with SSDP auto-discovery
 2. **MQTT Bridge** - Docker-based bridge for MQTT-based home automation setups
+
+> **Disclaimer:** pyvidaa is an independent, community-maintained project and is not affiliated with, endorsed by, or sponsored by Hisense or VIDAA. "VIDAA" and "Hisense" are trademarks of their respective owners; their use here is purely descriptive.
 
 ## Features
 
@@ -174,13 +176,13 @@ See [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) for common issues.
 Install the library:
 
 ```bash
-pip install myhisense-tv
+pip install pyvidaa
 ```
 
 Basic usage:
 
 ```python
-from hisense_tv import HisenseTV, discover_all
+from pyvidaa import HisenseTV, discover_all
 
 # Discover TVs on network
 devices = discover_all(timeout=5.0)

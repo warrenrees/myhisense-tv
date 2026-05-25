@@ -56,7 +56,7 @@ def test_resolve_brand_prefers_explicit_config(monkeypatch):
         called["probe"] = True
         return MagicMock(brand="his")
 
-    monkeypatch.setattr("hisense_tv.discovery.probe_ip", fake_probe)
+    monkeypatch.setattr("pyvidaa.discovery.probe_ip", fake_probe)
     brand = bridge._resolve_brand({"host": "10.0.0.50", "brand": "tpv"})
     assert brand == "tpv"
     assert called["probe"] is False
@@ -66,7 +66,7 @@ def test_resolve_brand_autodiscovers_when_unset(monkeypatch):
     """When brand is unset/default, it is discovered via the UPnP probe."""
     bridge = _bridge()
     monkeypatch.setattr(
-        "hisense_tv.discovery.probe_ip",
+        "pyvidaa.discovery.probe_ip",
         lambda *a, **k: MagicMock(brand="tpv"),
     )
     assert bridge._resolve_brand({"host": "10.0.0.50"}) == "tpv"
@@ -80,7 +80,7 @@ def test_resolve_brand_falls_back_to_his(monkeypatch):
     def boom(*a, **k):
         raise OSError("unreachable")
 
-    monkeypatch.setattr("hisense_tv.discovery.probe_ip", boom)
+    monkeypatch.setattr("pyvidaa.discovery.probe_ip", boom)
     assert bridge._resolve_brand({"host": "10.0.0.50"}) == "his"
 
 
@@ -101,7 +101,7 @@ def test_maybe_refresh_token(monkeypatch, status, expect_refresh):
 
     fake_storage = MagicMock()
     fake_storage.get_token_status.return_value = status
-    monkeypatch.setattr("hisense_tv.config.get_storage", lambda: fake_storage)
+    monkeypatch.setattr("pyvidaa.config.get_storage", lambda: fake_storage)
 
     bridge._maybe_refresh_token()
 

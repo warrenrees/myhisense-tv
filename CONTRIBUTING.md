@@ -1,4 +1,4 @@
-# Contributing to myhisense-tv
+# Contributing to pyvidaa
 
 Thank you for your interest in contributing to this project! This document provides guidelines for contributions.
 
@@ -8,7 +8,7 @@ Thank you for your interest in contributing to this project! This document provi
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/warrenrees/myhisense-tv.git
+   git clone https://github.com/warrenrees/pyvidaa.git
    cd hisense-tv
    ```
 
