@@ -19,14 +19,14 @@ from .const import (
     CONF_SW_VERSION,
     DEFAULT_NAME,
 )
-from .coordinator import HisenseTVDataUpdateCoordinator
+from .coordinator import VidaaTVDataUpdateCoordinator
 
 # Import key utilities from the library
 from pyvidaa.keys import get_key
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
-    from . import HisenseTVConfigEntry
+    from . import VidaaTVConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -35,15 +35,15 @@ PARALLEL_UPDATES = 1
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: HisenseTVConfigEntry,
+    entry: VidaaTVConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Hisense TV remote from a config entry."""
     coordinator = entry.runtime_data.coordinator
-    async_add_entities([HisenseTVRemote(coordinator, entry)])
+    async_add_entities([VidaaTVRemote(coordinator, entry)])
 
 
-class HisenseTVRemote(CoordinatorEntity[HisenseTVDataUpdateCoordinator], RemoteEntity):
+class VidaaTVRemote(CoordinatorEntity[VidaaTVDataUpdateCoordinator], RemoteEntity):
     """Representation of a Hisense TV remote."""
 
     _attr_has_entity_name = True
@@ -52,7 +52,7 @@ class HisenseTVRemote(CoordinatorEntity[HisenseTVDataUpdateCoordinator], RemoteE
 
     def __init__(
         self,
-        coordinator: HisenseTVDataUpdateCoordinator,
+        coordinator: VidaaTVDataUpdateCoordinator,
         entry: ConfigEntry,
     ) -> None:
         """Initialize the remote."""

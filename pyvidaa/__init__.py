@@ -3,7 +3,7 @@
 Protocol details discovered from Vidaa APK decompilation.
 """
 
-from .client import HisenseTV
+from .client import VidaaTV, HisenseTV
 from .keys import (
     # Power
     KEY_POWER,
@@ -137,6 +137,7 @@ from .discovery import (
     discover_all,
 )
 from .async_client import (
+    AsyncVidaaTV,
     AsyncHisenseTV,
     async_discover_ssdp,
     async_discover_udp,
@@ -145,9 +146,9 @@ from .async_client import (
     async_detect_protocol,
 )
 
-__version__ = "2.0.1"
+__version__ = "2.1.0"
 __all__ = [
-    "HisenseTV",
+    "VidaaTV",
     # Power
     "KEY_POWER",
     # Navigation
@@ -274,7 +275,7 @@ __all__ = [
     "SSDP_ADDR",
     "SSDP_PORT",
     # Async
-    "AsyncHisenseTV",
+    "AsyncVidaaTV",
     "async_discover_ssdp",
     "async_discover_udp",
     "async_probe_ip",

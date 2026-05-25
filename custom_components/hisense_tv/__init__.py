@@ -32,24 +32,24 @@ from .const import (
     ATTR_KEY,
     ATTR_APP,
 )
-from .coordinator import HisenseTVDataUpdateCoordinator
+from .coordinator import VidaaTVDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
 # Import from PyPI package (pyvidaa)
-from pyvidaa import AsyncHisenseTV
+from pyvidaa import AsyncVidaaTV
 from pyvidaa.config import get_storage
 
 
 @dataclass
-class HisenseTVRuntimeData:
+class VidaaTVRuntimeData:
     """Runtime data for Hisense TV integration."""
 
-    coordinator: HisenseTVDataUpdateCoordinator
-    tv: AsyncHisenseTV
+    coordinator: VidaaTVDataUpdateCoordinator
+    tv: AsyncVidaaTV
 
 
-type HisenseTVConfigEntry = ConfigEntry[HisenseTVRuntimeData]
+type VidaaTVConfigEntry = ConfigEntry[VidaaTVRuntimeData]
 
 CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
 
@@ -60,7 +60,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: HisenseTVConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: VidaaTVConfigEntry) -> bool:
     """Set up Hisense TV from a config entry."""
     host = entry.data[CONF_HOST]
     port = entry.data.get(CONF_PORT, DEFAULT_PORT)
@@ -73,7 +73,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HisenseTVConfigEntry) ->
     _LOGGER.debug("Setting up Hisense TV at %s:%s", host, port)
 
     # Create the async TV client
-    tv = AsyncHisenseTV(
+    tv = AsyncVidaaTV(
         host=host,
         port=port,
         certfile=certfile,
@@ -94,11 +94,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: HisenseTVConfigEntry) ->
         raise ConfigEntryNotReady(f"Error connecting to TV: {err}") from err
 
     # Create coordinator for data updates
-    coordinator = HisenseTVDataUpdateCoordinator(hass, tv, entry)
+    coordinator = VidaaTVDataUpdateCoordinator(hass, tv, entry)
     await coordinator.async_config_entry_first_refresh()
 
     # Store runtime data using the modern pattern
-    entry.runtime_data = HisenseTVRuntimeData(coordinator=coordinator, tv=tv)
+    entry.runtime_data = VidaaTVRuntimeData(coordinator=coordinator, tv=tv)
 
     # Set up platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
@@ -127,7 +127,7 @@ async def _async_setup_services(hass: HomeAssistant) -> None:
         for entry in entries:
             if entry.state is not ConfigEntryState.LOADED:
                 continue
-            runtime_data: HisenseTVRuntimeData = entry.runtime_data
+            runtime_data: VidaaTVRuntimeData = entry.runtime_data
             try:
                 await runtime_data.coordinator.async_send_key(key)
             except Exception as err:
@@ -151,7 +151,7 @@ async def _async_setup_services(hass: HomeAssistant) -> None:
         for entry in entries:
             if entry.state is not ConfigEntryState.LOADED:
                 continue
-            runtime_data: HisenseTVRuntimeData = entry.runtime_data
+            runtime_data: VidaaTVRuntimeData = entry.runtime_data
             try:
                 await runtime_data.coordinator.async_launch_app(app)
             except Exception as err:
@@ -183,7 +183,7 @@ async def _async_setup_services(hass: HomeAssistant) -> None:
         )
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: HisenseTVConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: VidaaTVConfigEntry) -> bool:
     """Unload a config entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
@@ -197,7 +197,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: HisenseTVConfigEntry) -
 
 async def async_remove_config_entry_device(
     hass: HomeAssistant,
-    config_entry: HisenseTVConfigEntry,
+    config_entry: VidaaTVConfigEntry,
     device_entry: DeviceEntry,
 ) -> bool:
     """Allow a device to be removed from the UI.
@@ -208,6 +208,6 @@ async def async_remove_config_entry_device(
     return True
 
 
-async def async_update_options(hass: HomeAssistant, entry: HisenseTVConfigEntry) -> None:
+async def async_update_options(hass: HomeAssistant, entry: VidaaTVConfigEntry) -> None:
     """Handle options update."""
     await hass.config_entries.async_reload(entry.entry_id)

@@ -13,7 +13,7 @@ import paho.mqtt.client as mqtt
 
 # Import from sibling package
 sys.path.insert(0, str(__file__).rsplit("/", 2)[0])
-from pyvidaa.client import HisenseTV
+from pyvidaa.client import VidaaTV
 from pyvidaa.wol import wake_tv
 from pyvidaa.keys import ALL_KEYS
 
@@ -38,7 +38,7 @@ def _ipv4_broadcast_subnet(host: str) -> Optional[str]:
     return None
 
 
-class HisenseMQTTBridge:
+class VidaaMQTTBridge:
     """Bridge between MQTT broker and Hisense TV."""
 
     def __init__(self, config: dict):
@@ -65,7 +65,7 @@ class HisenseMQTTBridge:
         self._broker_client: Optional[mqtt.Client] = None
 
         # Hisense TV client
-        self._tv: Optional[HisenseTV] = None
+        self._tv: Optional[VidaaTV] = None
 
         # Threading
         self._poll_thread: Optional[threading.Thread] = None
@@ -114,7 +114,7 @@ class HisenseMQTTBridge:
 
         tv_config = self.config.get("tv", {})
 
-        self._tv = HisenseTV(
+        self._tv = VidaaTV(
             host=tv_config["host"],
             port=tv_config.get("port", 36669),
             mac_address=tv_config.get("uuid"),
@@ -680,8 +680,8 @@ class HisenseMQTTBridge:
             self.stop()
 
 
-class HisenseMQTTMultiBridge:
-    """Run one HisenseMQTTBridge per configured TV.
+class VidaaMQTTMultiBridge:
+    """Run one VidaaMQTTBridge per configured TV.
 
     Each TV gets its own scoped config (unique device_id, broker client_id,
     LWT and topic namespace), so a single broker can expose several TVs as
@@ -691,14 +691,14 @@ class HisenseMQTTMultiBridge:
     def __init__(self, config: dict):
         """Initialize a bridge per TV found in the config."""
         self.scoped_configs = expand_tv_configs(config)
-        self.bridges = [HisenseMQTTBridge(cfg) for cfg in self.scoped_configs]
+        self.bridges = [VidaaMQTTBridge(cfg) for cfg in self.scoped_configs]
         self.running = False
         self._threads: list[threading.Thread] = []
 
-    def _tv_host(self, bridge: HisenseMQTTBridge) -> str:
+    def _tv_host(self, bridge: VidaaMQTTBridge) -> str:
         return bridge.config.get("tv", {}).get("host", "?")
 
-    def _start_bridge(self, bridge: HisenseMQTTBridge):
+    def _start_bridge(self, bridge: VidaaMQTTBridge):
         """Start one bridge, isolating failures so one TV can't stop the rest."""
         try:
             bridge.start()

@@ -11,14 +11,14 @@ pip install pyvidaa
 ## Quick Start
 
 ```python
-from pyvidaa import HisenseTV, discover_all
+from pyvidaa import VidaaTV, discover_all
 
 # Discover TVs
 devices = discover_all()
 print(devices)
 
 # Connect and control
-tv = HisenseTV(host="10.0.0.125", mac_address="84:C8:A0:C0:CE:8F")
+tv = VidaaTV(host="10.0.0.125", mac_address="84:C8:A0:C0:CE:8F")
 if tv.connect():
     tv.power_on()
     tv.disconnect()
@@ -108,14 +108,14 @@ class DiscoveredTV:
 
 ---
 
-## HisenseTV Client
+## VidaaTV Client
 
 ### Constructor
 
 ```python
-from pyvidaa import HisenseTV
+from pyvidaa import VidaaTV
 
-tv = HisenseTV(
+tv = VidaaTV(
     host="10.0.0.125",
     port=36669,
     mac_address="84:C8:A0:C0:CE:8F",

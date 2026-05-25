@@ -34,13 +34,13 @@ def _ipv4_broadcast_subnet(host: str) -> str | None:
     return None
 
 
-class HisenseTVDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
+class VidaaTVDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """Coordinator to manage data updates from Hisense TV."""
 
     def __init__(
         self,
         hass: HomeAssistant,
-        tv,  # AsyncHisenseTV
+        tv,  # AsyncVidaaTV
         entry: ConfigEntry,
     ) -> None:
         """Initialize the coordinator."""

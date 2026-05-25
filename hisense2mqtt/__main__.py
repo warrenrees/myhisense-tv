@@ -7,7 +7,7 @@ import os
 import sys
 
 from . import __version__
-from .bridge import HisenseMQTTMultiBridge
+from .bridge import VidaaMQTTMultiBridge
 from .config import expand_tv_configs, load_config
 
 
@@ -122,7 +122,7 @@ def main():
     # Start bridge(s)
     logger.info(f"hisense2mqtt v{__version__} starting ({len(scoped)} TV(s))...")
 
-    bridge = HisenseMQTTMultiBridge(config)
+    bridge = VidaaMQTTMultiBridge(config)
 
     try:
         bridge.run_forever()

@@ -14,7 +14,7 @@ from homeassistant.data_entry_flow import FlowResultType
 
 from custom_components.hisense_tv.config_flow import (
     CannotConnect,
-    HisenseTVConfigFlow,
+    VidaaTVConfigFlow,
 )
 from custom_components.hisense_tv.const import (
     CONF_BRAND,
@@ -138,7 +138,7 @@ async def test_pair_flow_persists_discovered_brand(
     mock_setup_entry: AsyncMock,
 ) -> None:
     """A non-Hisense brand from the UPnP probe is persisted to the entry."""
-    mock_config_flow_tv  # AsyncHisenseTV mock is active via fixture
+    mock_config_flow_tv  # AsyncVidaaTV mock is active via fixture
     with patch(
         "custom_components.hisense_tv.config_flow.probe_ip",
         return_value=MagicMock(brand="tpv", mac="00:11:22:33:44:55"),

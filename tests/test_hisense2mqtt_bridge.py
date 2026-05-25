@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from hisense2mqtt.bridge import HisenseMQTTBridge
+from hisense2mqtt.bridge import VidaaMQTTBridge
 
 
 def _bridge():
@@ -15,7 +15,7 @@ def _bridge():
         "options": {"poll_interval": 30},
         "tv": {"host": "10.0.0.50", "port": 36669, "uuid": "AA:BB:CC:DD:EE:01"},
     }
-    return HisenseMQTTBridge(config)
+    return VidaaMQTTBridge(config)
 
 
 def test_connect_tv_rebuilds_client(monkeypatch):

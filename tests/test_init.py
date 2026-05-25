@@ -37,7 +37,7 @@ async def test_async_setup_entry_success(
     entry.add_to_hass(hass)
 
     with patch(
-        "custom_components.hisense_tv.AsyncHisenseTV",
+        "custom_components.hisense_tv.AsyncVidaaTV",
         return_value=mock_hisense_tv,
     ):
         # Use the proper setup mechanism
@@ -58,7 +58,7 @@ async def test_async_setup_entry_connection_failed(
     entry.add_to_hass(hass)
 
     with patch(
-        "custom_components.hisense_tv.AsyncHisenseTV",
+        "custom_components.hisense_tv.AsyncVidaaTV",
         return_value=mock_hisense_tv_offline,
     ):
         await hass.config_entries.async_setup(entry.entry_id)
@@ -78,7 +78,7 @@ async def test_async_unload_entry(
     entry.add_to_hass(hass)
 
     with patch(
-        "custom_components.hisense_tv.AsyncHisenseTV",
+        "custom_components.hisense_tv.AsyncVidaaTV",
         return_value=mock_hisense_tv,
     ):
         await hass.config_entries.async_setup(entry.entry_id)
@@ -103,7 +103,7 @@ async def test_send_key_service(
     entry.add_to_hass(hass)
 
     with patch(
-        "custom_components.hisense_tv.AsyncHisenseTV",
+        "custom_components.hisense_tv.AsyncVidaaTV",
         return_value=mock_hisense_tv,
     ):
         await hass.config_entries.async_setup(entry.entry_id)
@@ -133,7 +133,7 @@ async def test_launch_app_service(
     entry.add_to_hass(hass)
 
     with patch(
-        "custom_components.hisense_tv.AsyncHisenseTV",
+        "custom_components.hisense_tv.AsyncVidaaTV",
         return_value=mock_hisense_tv,
     ):
         await hass.config_entries.async_setup(entry.entry_id)

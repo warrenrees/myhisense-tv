@@ -90,7 +90,7 @@ MOCK_CONFIG_ENTRY_DATA = {
 
 @pytest.fixture
 def mock_hisense_tv() -> Generator[MagicMock, None, None]:
-    """Create a mock AsyncHisenseTV client instance."""
+    """Create a mock AsyncVidaaTV client instance."""
     mock_instance = MagicMock()
 
     # Connection methods
@@ -156,7 +156,7 @@ def mock_hisense_tv() -> Generator[MagicMock, None, None]:
 
 @pytest.fixture
 def mock_hisense_tv_offline() -> Generator[MagicMock, None, None]:
-    """Create a mock AsyncHisenseTV client that fails to connect."""
+    """Create a mock AsyncVidaaTV client that fails to connect."""
     mock_instance = MagicMock()
     mock_instance.async_connect = AsyncMock(return_value=False)
     mock_instance.async_disconnect = AsyncMock()
@@ -167,12 +167,12 @@ def mock_hisense_tv_offline() -> Generator[MagicMock, None, None]:
 
 @pytest.fixture
 def mock_config_flow_tv() -> Generator[MagicMock, None, None]:
-    """Mock AsyncHisenseTV for config flow tests."""
+    """Mock AsyncVidaaTV for config flow tests."""
     probe_device = MagicMock()
     probe_device.brand = "his"
     probe_device.mac = "00:11:22:33:44:55"
     with patch(
-        "custom_components.hisense_tv.config_flow.AsyncHisenseTV", autospec=True
+        "custom_components.hisense_tv.config_flow.AsyncVidaaTV", autospec=True
     ) as mock_class, patch(
         "custom_components.hisense_tv.config_flow.probe_ip",
         return_value=probe_device,

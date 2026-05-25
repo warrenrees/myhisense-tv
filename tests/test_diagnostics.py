@@ -26,7 +26,7 @@ async def test_diagnostics(
     entry.add_to_hass(hass)
 
     with patch(
-        "custom_components.hisense_tv.AsyncHisenseTV",
+        "custom_components.hisense_tv.AsyncVidaaTV",
         return_value=mock_hisense_tv,
     ):
         await hass.config_entries.async_setup(entry.entry_id)
@@ -68,7 +68,7 @@ async def test_diagnostics_tv_offline(
     entry.add_to_hass(hass)
 
     with patch(
-        "custom_components.hisense_tv.AsyncHisenseTV",
+        "custom_components.hisense_tv.AsyncVidaaTV",
         return_value=mock_hisense_tv,
     ):
         await hass.config_entries.async_setup(entry.entry_id)

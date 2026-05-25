@@ -58,7 +58,7 @@ lib_path = Path(__file__).parent.parent.parent
 if str(lib_path) not in sys.path:
     sys.path.insert(0, str(lib_path))
 
-from pyvidaa import AsyncHisenseTV
+from pyvidaa import AsyncVidaaTV
 from pyvidaa.discovery import probe_ip
 
 
@@ -94,7 +94,7 @@ async def validate_connection(
     # Use provided MAC or generate a random one for dynamic auth
     mac = mac_address or generate_random_mac()
 
-    tv = AsyncHisenseTV(
+    tv = AsyncVidaaTV(
         host=host,
         port=port,
         certfile=certfile,
@@ -143,7 +143,7 @@ async def validate_connection(
         raise CannotConnect(str(err)) from err
 
 
-class HisenseTVConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+class VidaaTVConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Hisense TV."""
 
     VERSION = 1
@@ -425,7 +425,7 @@ class HisenseTVConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     _LOGGER.debug("Could not probe brand for %s: %s", self._host, err)
 
             # Create TV client for pairing
-            tv = AsyncHisenseTV(
+            tv = AsyncVidaaTV(
                 host=self._host,
                 port=self._port,
                 certfile=self._certfile,
@@ -506,7 +506,7 @@ class HisenseTVConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     pass
 
         # Show PIN dialog on TV
-        tv = AsyncHisenseTV(
+        tv = AsyncVidaaTV(
             host=self._host,
             port=self._port,
             certfile=self._certfile,
@@ -557,10 +557,10 @@ class HisenseTVConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         config_entry: config_entries.ConfigEntry,
     ) -> config_entries.OptionsFlow:
         """Create the options flow."""
-        return HisenseTVOptionsFlow()
+        return VidaaTVOptionsFlow()
 
 
-class HisenseTVOptionsFlow(config_entries.OptionsFlow):
+class VidaaTVOptionsFlow(config_entries.OptionsFlow):
     """Handle options flow for Hisense TV."""
 
     async def async_step_init(

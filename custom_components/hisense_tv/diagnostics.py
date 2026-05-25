@@ -7,7 +7,7 @@ from typing import Any
 from homeassistant.components.diagnostics import async_redact_data
 from homeassistant.core import HomeAssistant
 
-from . import HisenseTVConfigEntry
+from . import VidaaTVConfigEntry
 
 TO_REDACT = {
     "mac",
@@ -22,7 +22,7 @@ TO_REDACT = {
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: HisenseTVConfigEntry
+    hass: HomeAssistant, entry: VidaaTVConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     runtime_data = entry.runtime_data

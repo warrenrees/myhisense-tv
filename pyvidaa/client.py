@@ -60,7 +60,7 @@ from .topics import (
 )
 
 
-class HisenseTV:
+class VidaaTV:
     """Client to control Hisense TV via MQTT."""
 
     def __init__(
@@ -1235,3 +1235,8 @@ class HisenseTV:
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Context manager exit."""
         self.disconnect()
+
+
+# Backwards-compatible alias. The class was named HisenseTV before 2.1.0;
+# kept importable for existing code. Prefer VidaaTV in new code.
+HisenseTV = VidaaTV

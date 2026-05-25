@@ -10,7 +10,7 @@ import time
 from typing import Optional
 
 from .certs import MISSING_CERT_HELP, resolve_client_certs
-from .client import HisenseTV
+from .client import VidaaTV
 from .discovery import discover_all, discover_ssdp, discover_udp, probe_ip
 from .config import (
     load_config,
@@ -84,7 +84,7 @@ def _resolve_brand_for_ip(ip: str) -> str:
     return "his"
 
 
-def create_tv_client(tv_id: Optional[str] = None, ip: Optional[str] = None) -> HisenseTV:
+def create_tv_client(tv_id: Optional[str] = None, ip: Optional[str] = None) -> VidaaTV:
     """Create TV client with config settings.
 
     Args:
@@ -92,13 +92,13 @@ def create_tv_client(tv_id: Optional[str] = None, ip: Optional[str] = None) -> H
         ip: Override IP address (takes precedence over tv_id)
 
     Returns:
-        Configured HisenseTV client
+        Configured VidaaTV client
     """
     if ip:
         # Direct IP override - still resolve the MAC so dynamic auth can build a
         # valid client_id (otherwise we silently fall back to static creds -> rc=5).
         mac_address = _resolve_mac_for_ip(ip)
-        return HisenseTV(
+        return VidaaTV(
             host=ip,
             port=DEFAULT_PORT,
             mac_address=mac_address,
@@ -129,7 +129,7 @@ def create_tv_client(tv_id: Optional[str] = None, ip: Optional[str] = None) -> H
     if not host:
         raise ValueError(f"TV '{tv_id or 'default'}' has no host configured.")
 
-    return HisenseTV(
+    return VidaaTV(
         host=host,
         port=port,
         mac_address=mac_address,

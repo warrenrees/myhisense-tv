@@ -3,7 +3,7 @@
 Provides asyncio-compatible interface for controlling Hisense/Vidaa TVs.
 Uses executor to run sync operations in a thread pool.
 
-For Home Assistant integration, use AsyncHisenseTV with hass.async_add_executor_job().
+For Home Assistant integration, use AsyncVidaaTV with hass.async_add_executor_job().
 """
 
 import asyncio
@@ -12,7 +12,7 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from typing import Any, Callable, Optional, List
 
-from .client import HisenseTV
+from .client import VidaaTV
 from .config import (
     DEFAULT_PORT,
     DEFAULT_MQTT_USERNAME,
@@ -37,19 +37,19 @@ def _get_executor() -> ThreadPoolExecutor:
     return _DEFAULT_EXECUTOR
 
 
-class AsyncHisenseTV:
-    """Async wrapper for HisenseTV client.
+class AsyncVidaaTV:
+    """Async wrapper for VidaaTV client.
 
     Provides asyncio-compatible methods for TV control.
     All blocking operations are run in a thread pool executor.
 
     Example usage:
-        async with AsyncHisenseTV("192.168.1.50") as tv:
+        async with AsyncVidaaTV("192.168.1.50") as tv:
             await tv.power()
             volume = await tv.get_volume()
 
     For Home Assistant, you can also use with executor_job:
-        tv = AsyncHisenseTV("192.168.1.50")
+        tv = AsyncVidaaTV("192.168.1.50")
         await tv.async_connect()
         await tv.async_power()
     """
@@ -128,7 +128,7 @@ class AsyncHisenseTV:
         }
 
         # Client is created lazily in _ensure_client() to avoid blocking event loop
-        self._client: Optional[HisenseTV] = None
+        self._client: Optional[VidaaTV] = None
 
     def _get_loop(self) -> asyncio.AbstractEventLoop:
         """Get event loop."""
@@ -139,14 +139,14 @@ class AsyncHisenseTV:
         except RuntimeError:
             return asyncio.get_event_loop()
 
-    def _ensure_client(self) -> HisenseTV:
+    def _ensure_client(self) -> VidaaTV:
         """Ensure the sync client is created (for use in executor).
 
         This must be called from within an executor thread, not the event loop,
-        because HisenseTV.__init__ performs blocking SSL operations.
+        because VidaaTV.__init__ performs blocking SSL operations.
         """
         if self._client is None:
-            self._client = HisenseTV(**self._init_kwargs)
+            self._client = VidaaTV(**self._init_kwargs)
         return self._client
 
     async def _async_ensure_client(self) -> None:
@@ -547,7 +547,7 @@ class AsyncHisenseTV:
         return await self._call("launch_app", app_name, check_state=check_state)
 
     # Async context manager
-    async def __aenter__(self) -> "AsyncHisenseTV":
+    async def __aenter__(self) -> "AsyncVidaaTV":
         """Async context manager entry."""
         await self.async_connect()
         return self
@@ -728,3 +728,7 @@ async def async_detect_protocol(
         exec,
         partial(detect_protocol, host, port=port, timeout=timeout),
     )
+
+
+# Backwards-compatible alias (renamed from AsyncHisenseTV in 2.1.0). Deprecated.
+AsyncHisenseTV = AsyncVidaaTV

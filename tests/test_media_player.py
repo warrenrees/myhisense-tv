@@ -28,7 +28,7 @@ async def test_media_player_setup(
     entry.add_to_hass(hass)
 
     with patch(
-        "custom_components.hisense_tv.AsyncHisenseTV",
+        "custom_components.hisense_tv.AsyncVidaaTV",
         return_value=mock_hisense_tv,
     ):
         await hass.config_entries.async_setup(entry.entry_id)
@@ -47,7 +47,7 @@ async def test_media_player_state_on(
     entry.add_to_hass(hass)
 
     with patch(
-        "custom_components.hisense_tv.AsyncHisenseTV",
+        "custom_components.hisense_tv.AsyncVidaaTV",
         return_value=mock_hisense_tv,
     ):
         await hass.config_entries.async_setup(entry.entry_id)
@@ -70,7 +70,7 @@ async def test_media_player_state_off(
     entry.add_to_hass(hass)
 
     with patch(
-        "custom_components.hisense_tv.AsyncHisenseTV",
+        "custom_components.hisense_tv.AsyncVidaaTV",
         return_value=mock_hisense_tv,
     ):
         await hass.config_entries.async_setup(entry.entry_id)
@@ -89,7 +89,7 @@ async def test_media_player_volume(
     entry.add_to_hass(hass)
 
     with patch(
-        "custom_components.hisense_tv.AsyncHisenseTV",
+        "custom_components.hisense_tv.AsyncVidaaTV",
         return_value=mock_hisense_tv,
     ):
         await hass.config_entries.async_setup(entry.entry_id)
@@ -109,7 +109,7 @@ async def test_media_player_turn_on(
     entry.add_to_hass(hass)
 
     with patch(
-        "custom_components.hisense_tv.AsyncHisenseTV",
+        "custom_components.hisense_tv.AsyncVidaaTV",
         return_value=mock_hisense_tv,
     ):
         await hass.config_entries.async_setup(entry.entry_id)
@@ -130,7 +130,7 @@ async def test_media_player_turn_off(
     entry.add_to_hass(hass)
 
     with patch(
-        "custom_components.hisense_tv.AsyncHisenseTV",
+        "custom_components.hisense_tv.AsyncVidaaTV",
         return_value=mock_hisense_tv,
     ):
         await hass.config_entries.async_setup(entry.entry_id)
@@ -151,7 +151,7 @@ async def test_media_player_select_source(
     entry.add_to_hass(hass)
 
     with patch(
-        "custom_components.hisense_tv.AsyncHisenseTV",
+        "custom_components.hisense_tv.AsyncVidaaTV",
         return_value=mock_hisense_tv,
     ):
         await hass.config_entries.async_setup(entry.entry_id)
@@ -172,7 +172,7 @@ async def test_media_player_launch_app(
     entry.add_to_hass(hass)
 
     with patch(
-        "custom_components.hisense_tv.AsyncHisenseTV",
+        "custom_components.hisense_tv.AsyncVidaaTV",
         return_value=mock_hisense_tv,
     ):
         await hass.config_entries.async_setup(entry.entry_id)
@@ -193,7 +193,7 @@ async def test_media_player_send_key(
     entry.add_to_hass(hass)
 
     with patch(
-        "custom_components.hisense_tv.AsyncHisenseTV",
+        "custom_components.hisense_tv.AsyncVidaaTV",
         return_value=mock_hisense_tv,
     ):
         await hass.config_entries.async_setup(entry.entry_id)

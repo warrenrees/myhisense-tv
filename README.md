@@ -82,7 +82,7 @@ certificate against the bundled RemoteCA (the hostname check is always skipped,
 since the certificate's CN is `RemoteCA` rather than the TV's IP):
 
 ```python
-tv = HisenseTV("192.168.1.50", certfile=..., keyfile=..., verify_ssl=True)
+tv = VidaaTV("192.168.1.50", certfile=..., keyfile=..., verify_ssl=True)
 ```
 
 ## Quick Start
@@ -242,7 +242,7 @@ pip install pyvidaa
 Basic usage:
 
 ```python
-from pyvidaa import HisenseTV, discover_all
+from pyvidaa import VidaaTV, discover_all
 
 # Discover TVs on network
 devices = discover_all(timeout=5.0)
@@ -250,7 +250,7 @@ for ip, device in devices.items():
     print(f"Found: {ip} - {device.name}")
 
 # Connect to TV
-tv = HisenseTV(
+tv = VidaaTV(
     host="YOUR_TV_IP",
     mac_address="XX:XX:XX:XX:XX:XX",
     use_dynamic_auth=True,

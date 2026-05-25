@@ -13,7 +13,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from pyvidaa.client import HisenseTV
+from pyvidaa.client import VidaaTV
 from pyvidaa.config.storage import TokenStorage
 from pyvidaa.credentials import generate_credentials
 from pyvidaa.protocol import (
@@ -187,7 +187,7 @@ def test_detect_protocol_explicit_port_skips_fallback():
 # --- message handling (non-dict payloads must not crash) -------------------
 
 def _make_client():
-    return HisenseTV(
+    return VidaaTV(
         host="10.0.0.1",
         mac_address=KNOWN_UUID,
         use_ssl=False,
@@ -270,7 +270,7 @@ def test_handle_token_response_persists_and_is_retrievable(tmp_path):
     crashed the MQTT loop thread; lookups also fall back to the host:port key.
     """
     storage = TokenStorage(tmp_path / "tokens.json")
-    client = HisenseTV(
+    client = VidaaTV(
         host="10.0.0.50",
         port=36669,
         mac_address=KNOWN_UUID,
@@ -342,10 +342,10 @@ def test_server_verify_args_opt_in(monkeypatch):
     # Avoid any real network/protocol detection during construction.
     monkeypatch.setattr("pyvidaa.client.detect_protocol", lambda *a, **k: None)
 
-    off = HisenseTV("10.0.0.50", use_ssl=False, enable_persistence=False, verify_ssl=False)
+    off = VidaaTV("10.0.0.50", use_ssl=False, enable_persistence=False, verify_ssl=False)
     assert off._server_verify_args() == (None, ssl.CERT_NONE)
 
-    on = HisenseTV("10.0.0.50", use_ssl=False, enable_persistence=False, verify_ssl=True)
+    on = VidaaTV("10.0.0.50", use_ssl=False, enable_persistence=False, verify_ssl=True)
     assert on._server_verify_args() == (bundled_ca_path(), ssl.CERT_REQUIRED)
 
 

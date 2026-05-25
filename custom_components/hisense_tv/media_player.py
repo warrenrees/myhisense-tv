@@ -24,10 +24,10 @@ from .const import (
     CONF_SW_VERSION,
     DEFAULT_NAME,
 )
-from .coordinator import HisenseTVDataUpdateCoordinator
+from .coordinator import VidaaTVDataUpdateCoordinator
 
 if TYPE_CHECKING:
-    from . import HisenseTVConfigEntry
+    from . import VidaaTVConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -36,15 +36,15 @@ PARALLEL_UPDATES = 1
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: HisenseTVConfigEntry,
+    entry: VidaaTVConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Hisense TV media player from a config entry."""
     coordinator = entry.runtime_data.coordinator
-    async_add_entities([HisenseTVMediaPlayer(coordinator, entry)])
+    async_add_entities([VidaaTVMediaPlayer(coordinator, entry)])
 
 
-class HisenseTVMediaPlayer(CoordinatorEntity[HisenseTVDataUpdateCoordinator], MediaPlayerEntity):
+class VidaaTVMediaPlayer(CoordinatorEntity[VidaaTVDataUpdateCoordinator], MediaPlayerEntity):
     """Representation of a Hisense TV media player."""
 
     _attr_device_class = MediaPlayerDeviceClass.TV
@@ -66,8 +66,8 @@ class HisenseTVMediaPlayer(CoordinatorEntity[HisenseTVDataUpdateCoordinator], Me
 
     def __init__(
         self,
-        coordinator: HisenseTVDataUpdateCoordinator,
-        entry: HisenseTVConfigEntry,
+        coordinator: VidaaTVDataUpdateCoordinator,
+        entry: VidaaTVConfigEntry,
     ) -> None:
         """Initialize the media player."""
         super().__init__(coordinator)

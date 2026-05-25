@@ -11,7 +11,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import UpdateFailed
 
-from custom_components.hisense_tv.coordinator import HisenseTVDataUpdateCoordinator
+from custom_components.hisense_tv.coordinator import VidaaTVDataUpdateCoordinator
 from custom_components.hisense_tv.const import DOMAIN, SCAN_INTERVAL
 
 from .conftest import MOCK_CONFIG_ENTRY_DATA, MOCK_DEVICE_INFO, MOCK_TV_STATE, create_mock_config_entry
@@ -26,7 +26,7 @@ async def test_coordinator_update_success(
     entry.add_to_hass(hass)
 
     with patch(
-        "custom_components.hisense_tv.AsyncHisenseTV",
+        "custom_components.hisense_tv.AsyncVidaaTV",
         return_value=mock_hisense_tv,
     ):
         await hass.config_entries.async_setup(entry.entry_id)
@@ -53,7 +53,7 @@ async def test_coordinator_update_tv_off(
     entry.add_to_hass(hass)
 
     with patch(
-        "custom_components.hisense_tv.AsyncHisenseTV",
+        "custom_components.hisense_tv.AsyncVidaaTV",
         return_value=mock_hisense_tv,
     ):
         await hass.config_entries.async_setup(entry.entry_id)
@@ -71,7 +71,7 @@ async def test_coordinator_custom_scan_interval(
     entry = create_mock_config_entry(hass, options={"scan_interval": 60})
     entry.add_to_hass(hass)
 
-    coordinator = HisenseTVDataUpdateCoordinator(hass, mock_hisense_tv, entry)
+    coordinator = VidaaTVDataUpdateCoordinator(hass, mock_hisense_tv, entry)
 
     assert coordinator.update_interval == timedelta(seconds=60)
 
@@ -84,7 +84,7 @@ async def test_coordinator_default_scan_interval(
     entry = create_mock_config_entry(hass)
     entry.add_to_hass(hass)
 
-    coordinator = HisenseTVDataUpdateCoordinator(hass, mock_hisense_tv, entry)
+    coordinator = VidaaTVDataUpdateCoordinator(hass, mock_hisense_tv, entry)
 
     assert coordinator.update_interval == timedelta(seconds=SCAN_INTERVAL)
 
@@ -100,7 +100,7 @@ async def test_coordinator_reconnect(
     entry.add_to_hass(hass)
 
     with patch(
-        "custom_components.hisense_tv.AsyncHisenseTV",
+        "custom_components.hisense_tv.AsyncVidaaTV",
         return_value=mock_hisense_tv,
     ):
         await hass.config_entries.async_setup(entry.entry_id)
@@ -130,7 +130,7 @@ async def test_coordinator_refreshes_token_near_expiry(
     entry.add_to_hass(hass)
 
     with patch(
-        "custom_components.hisense_tv.AsyncHisenseTV",
+        "custom_components.hisense_tv.AsyncVidaaTV",
         return_value=mock_hisense_tv,
     ):
         await hass.config_entries.async_setup(entry.entry_id)
@@ -149,7 +149,7 @@ async def test_coordinator_no_refresh_when_token_fresh(
     entry.add_to_hass(hass)
 
     with patch(
-        "custom_components.hisense_tv.AsyncHisenseTV",
+        "custom_components.hisense_tv.AsyncVidaaTV",
         return_value=mock_hisense_tv,
     ):
         await hass.config_entries.async_setup(entry.entry_id)
@@ -177,7 +177,7 @@ async def test_coordinator_no_refresh_when_needs_reauth(
     entry.add_to_hass(hass)
 
     with patch(
-        "custom_components.hisense_tv.AsyncHisenseTV",
+        "custom_components.hisense_tv.AsyncVidaaTV",
         return_value=mock_hisense_tv,
     ):
         await hass.config_entries.async_setup(entry.entry_id)
@@ -196,7 +196,7 @@ async def test_coordinator_turn_on_with_wol(
     entry.add_to_hass(hass)
 
     with patch(
-        "custom_components.hisense_tv.AsyncHisenseTV",
+        "custom_components.hisense_tv.AsyncVidaaTV",
         return_value=mock_hisense_tv,
     ):
         await hass.config_entries.async_setup(entry.entry_id)
@@ -220,7 +220,7 @@ async def test_coordinator_turn_off(
     entry.add_to_hass(hass)
 
     with patch(
-        "custom_components.hisense_tv.AsyncHisenseTV",
+        "custom_components.hisense_tv.AsyncVidaaTV",
         return_value=mock_hisense_tv,
     ):
         await hass.config_entries.async_setup(entry.entry_id)
@@ -241,7 +241,7 @@ async def test_coordinator_volume_controls(
     entry.add_to_hass(hass)
 
     with patch(
-        "custom_components.hisense_tv.AsyncHisenseTV",
+        "custom_components.hisense_tv.AsyncVidaaTV",
         return_value=mock_hisense_tv,
     ):
         await hass.config_entries.async_setup(entry.entry_id)
@@ -274,7 +274,7 @@ async def test_coordinator_auth_failure_triggers_reauth(
     entry = create_mock_config_entry(hass)
     entry.add_to_hass(hass)
 
-    coordinator = HisenseTVDataUpdateCoordinator(hass, mock_tv, entry)
+    coordinator = VidaaTVDataUpdateCoordinator(hass, mock_tv, entry)
 
     # Simulate 3 auth failures
     for _ in range(3):
